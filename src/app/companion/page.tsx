@@ -6,7 +6,9 @@ import { Button } from "~/components/ui/button";
 export const metadata = {
   title: "Health Companion | AI Bloodwork & Meds Tracker",
   description:
-    "Your smart health companion: OCR + AI to analyze bloodwork, track medications, and monitor key health metrics.",
+    "Your smart health companion: OCR + AI to analyze bloodwork, " +
+    "track medications, and monitor key health metrics.",
+  icon: [{ rel: "icon", url: "/favicon2.svg" }],
 };
 
 export default function CompanionLandingPage() {
@@ -65,7 +67,7 @@ export default function CompanionLandingPage() {
             </Button>
           </div>
           <div className="flex items-center gap-3 pt-2 text-xs text-muted-foreground">
-            <span>No credit card required</span>
+            <span>No payment, no credit card required</span>
             <span>•</span>
             <span>HIPAA‑friendly design</span>
           </div>
@@ -79,7 +81,7 @@ export default function CompanionLandingPage() {
                 <div className="size-2 rounded-full bg-yellow-400" />
                 <div className="size-2 rounded-full bg-green-500" />
               </div>
-              <span className="text-xs text-muted-foreground">OCR Preview</span>
+              <span className="text-xs text-muted-foreground">Smart Analysis Preview</span>
             </div>
             <div className="grid gap-4 p-2 sm:p-4">
               <div className="grid grid-cols-3 items-center gap-2 text-sm">
