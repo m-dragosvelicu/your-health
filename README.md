@@ -125,3 +125,10 @@ You can deploy to any Next.js‑compatible platform (Vercel, Netlify, Docker, et
 - `npm start`
 
 For more on the T3 Stack, see https://create.t3.gg/. 
+
+
+## Health Companion landing page
+- New hero landing page showcasing the upcoming health companion webapp.
+- Path: `/companion`
+- Built with Tailwind CSS 4 and shadcn/ui components (Button, Badge).
+- Highlights: OCR + AI bloodwork analysis, medication tracking, health metrics, and insights.
