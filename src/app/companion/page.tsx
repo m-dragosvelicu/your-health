@@ -74,7 +74,7 @@ export default function CompanionLandingPage() {
             FAQ
           </Link>
           <Button asChild size="sm" className="ml-2">
-            <Link href="#cta">Get Started</Link>
+            <Link href="/auth">Get Started</Link>
           </Button>
         </nav>
       </header>
@@ -113,7 +113,7 @@ export default function CompanionLandingPage() {
             </div>
           </div>
           <div id="cta" className="flex flex-wrap gap-3">
-            <Button size="lg" className="text-base">Get Started Free</Button>
+            <Button size="lg" className="text-base"><Link href="/auth">Get Started Free</Link></Button>
             <Button size="lg" variant="outline" asChild>
               <Link href="#demo">Watch Demo</Link>
             </Button>
