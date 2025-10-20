@@ -2,8 +2,10 @@ import "~/styles/globals.css";
 
 import { type Metadata } from "next";
 import { Geist } from "next/font/google";
+import Script from "next/script";
 
 import { TRPCReactProvider } from "~/trpc/react";
+import ThemeToggle from "~/components/theme-toggle";
 
 export const metadata: Metadata = {
   title: "T3 Stack Test WebApp",
@@ -20,9 +22,13 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${geist.variable}`}>
+    <html lang="en" className={`${geist.variable}`} suppressHydrationWarning>
       <body>
+        <Script id="theme-init" strategy="beforeInteractive">{
+          `try{var d=window.document.documentElement;var s=localStorage.getItem('theme');var m=window.matchMedia('(prefers-color-scheme: dark)');var isDark=s==='dark'||(s!=='light'&&m.matches);if(isDark){d.classList.add('dark')}else{d.classList.remove('dark')}}catch(e){}`
+        }</Script>
         <TRPCReactProvider>{children}</TRPCReactProvider>
+        <ThemeToggle />
       </body>
     </html>
   );
