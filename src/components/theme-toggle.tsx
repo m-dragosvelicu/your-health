@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Moon, Sun } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Moon, Sun, SunMoon } from "lucide-react";
 import { Button } from "~/components/ui/button";
 
 // Storage key to persist user preference
@@ -23,11 +23,6 @@ function applyTheme(mode: Mode) {
 export default function ThemeToggle() {
   const [mode, setMode] = useState<Mode | null>(null);
 
-  // Compute whether dark is currently active (for icon)
-  const isDark = useMemo(() => {
-    if (mode === null) return false;
-    return mode === "dark" || (mode === "system" && getSystemPrefersDark());
-  }, [mode]);
 
   // Initialize from storage or system on mount
   useEffect(() => {
@@ -35,32 +30,43 @@ export default function ThemeToggle() {
       const stored = (localStorage.getItem(STORAGE_KEY) as Mode | null) ?? "system";
       setMode(stored);
       applyTheme(stored);
-    } catch (_err) {
+    } catch {
       setMode("system");
       applyTheme("system");
     }
 
+    // No-op if matchMedia not available (very old browsers)
+    if (typeof window.matchMedia !== "function") return;
+
     // If user selected system, update when system preference changes
-    const mql = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
     const handler = () => {
       setMode((prev) => {
         if (prev === "system") applyTheme("system");
         return prev;
       });
     };
-    try {
-      mql?.addEventListener?.("change", handler);
-    } catch {
-      // Safari support
-      // @ts-ignore
-      mql?.addListener?.(handler);
+
+    // Prefer modern API; fall back for legacy Safari
+    if (typeof mql.addEventListener === "function") {
+      mql.addEventListener("change", handler);
+    } else {
+      const legacy = mql as MediaQueryList & {
+        addListener?: (listener: (this: MediaQueryList, ev: MediaQueryListEvent) => void) => void;
+        removeListener?: (listener: (this: MediaQueryList, ev: MediaQueryListEvent) => void) => void;
+      };
+      legacy.addListener?.(handler);
     }
+
     return () => {
-      try {
-        mql?.removeEventListener?.("change", handler);
-      } catch {
-        // @ts-ignore
-        mql?.removeListener?.(handler);
+      if (typeof mql.removeEventListener === "function") {
+        mql.removeEventListener("change", handler);
+      } else {
+        const legacy = mql as MediaQueryList & {
+          addListener?: (listener: (this: MediaQueryList, ev: MediaQueryListEvent) => void) => void;
+          removeListener?: (listener: (this: MediaQueryList, ev: MediaQueryListEvent) => void) => void;
+        };
+        legacy.removeListener?.(handler);
       }
     };
   }, []);
@@ -77,7 +83,7 @@ export default function ThemeToggle() {
 
   if (mode === null) return null; // avoid SSR mismatch flash
 
-  const label = mode === "system" ? "System" : mode === "dark" ? "Dark" : "Light";
+  const label = mode === "system" ? "Auto" : mode === "dark" ? "Dark" : "Light";
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
@@ -90,9 +96,16 @@ export default function ThemeToggle() {
         onClick={cycleMode}
         className="relative transition-colors"
       >
-        {/* Sun and moon icons crossfade/rotate */}
-        <Sun className={`size-5 transition-all ${isDark ? "scale-0 rotate-90" : "scale-100 rotate-0"}`} />
-        <Moon className={`absolute size-5 transition-all ${isDark ? "scale-100 rotate-0" : "scale-0 -rotate-90"}`} />
+        {/* Sun, Moon, and Auto (SunMoon) icons crossfade/rotate based on explicit mode */}
+        <Sun
+          className={`size-5 transition-all ${mode === "light" ? "opacity-100 scale-100 rotate-0" : "opacity-0 scale-0 -rotate-90"}`}
+        />
+        <Moon
+          className={`absolute size-5 transition-all ${mode === "dark" ? "opacity-100 scale-100 rotate-0" : "opacity-0 scale-0 -rotate-90"}`}
+        />
+        <SunMoon
+          className={`absolute size-5 transition-all ${mode === "system" ? "opacity-100 scale-100 rotate-0" : "opacity-0 scale-0 -rotate-90"}`}
+        />
         <span className="sr-only">Toggle theme</span>
       </Button>
     </div>
