@@ -6,6 +6,7 @@ import Script from "next/script";
 
 import { TRPCReactProvider } from "~/trpc/react";
 import ThemeToggle from "~/components/theme-toggle";
+import React from "react";
 
 export const metadata: Metadata = {
   title: "T3 Stack Test WebApp",
