@@ -45,6 +45,7 @@ const AppleLogo = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export default function AuthPage() {
+  // Local UI state for switching between sign-up and login modes
   const [mode, setMode] = useState<"signup" | "login">("signup");
 
   const isSignup = mode === "signup";
@@ -59,6 +60,7 @@ export default function AuthPage() {
             <div className="mb-6 flex justify-center">
               <div className="relative inline-flex w-full max-w-xs items-center rounded-full border bg-background p-1 text-sm">
                 {/* Sliding indicator */}
+                {/* Sliding pill indicator that moves between "Sign up" and "Login" based on current mode */}
                 <div
                   className={`absolute left-1 top-1 h-8 w-[calc(50%-0.25rem)] rounded-full bg-primary/10 transition-transform duration-300 will-change-transform ${
                     isSignup ? "translate-x-0" : "translate-x-full"
@@ -99,6 +101,7 @@ export default function AuthPage() {
             </div>
 
             {/* Form */}
+            {/* Demo-only: prevent actual submission; integrate with your auth logic (NextAuth, tRPC mutation, etc.) */}
             <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
               {isSignup && (
                 <div className="space-y-2">
@@ -182,7 +185,7 @@ export default function AuthPage() {
                 </div>
               </div>
 
-              {/* OAuth buttons */}
+              {/* OAuth buttons (placeholders): wire these up to your auth provider callbacks */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <Button type="button" variant="outline" className="w-full">
                   <GoogleLogo className="size-4" aria-hidden />

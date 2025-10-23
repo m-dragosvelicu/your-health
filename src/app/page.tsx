@@ -5,14 +5,22 @@ import { auth } from "~/server/auth";
 import { api, HydrateClient } from "~/trpc/server";
 
 export default async function Home() {
+  // Server Component: run a tRPC query on the server to demonstrate end-to-end type safety.
+  // This executes at request time and its result can be rendered directly.
   const hello = await api.post.hello({ text: "from tRPC" });
+
+  // Retrieve the NextAuth session on the server. If a user is logged in, we can
+  // prefetch additional tRPC data and hydrate it on the client (see below).
   const session = await auth();
 
+  // If the user is authenticated, prefetch data the client will likely need next.
+  // tRPC's prefetch + HydrateClient allows us to avoid a loading state on the client.
   if (session?.user) {
     void api.post.getLatest.prefetch();
   }
 
   return (
+    // HydrateClient makes server-prefetched tRPC queries available to client components.
     <HydrateClient>
       <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
         <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16">
@@ -71,6 +79,7 @@ export default async function Home() {
             </div>
           </div>
 
+          {/* Render the latest post list only for authenticated users */}
           {session?.user && <LatestPost />}
         </div>
       </main>
