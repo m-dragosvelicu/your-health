@@ -1,4 +1,5 @@
 "use client";
+// Client Component: uses useEffect/useRef and DOM APIs for the carousel, so it must run on the client
 
 import Link from "next/link";
 import { Badge } from "~/components/ui/badge";
@@ -6,30 +7,37 @@ import { Button } from "~/components/ui/button";
 import { useEffect, useRef } from "react";
 
 export default function CompanionLandingPage() {
+  // Ref for the horizontally scrollable carousel container. We only access it on the client.
   const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const carousel = carouselRef.current;
     if (!carousel) return;
 
+    // Auto-scroll the horizontal carousel every 4 seconds.
+    // The scroll pauses while the user hovers, and resumes when the mouse leaves.
+    // When reaching the end, we smoothly jump back to the start.
     let scrollInterval: NodeJS.Timeout;
     let isPaused = false;
 
     const startAutoScroll = () => {
       scrollInterval = setInterval(() => {
-        if (isPaused) return;
+        if (isPaused) return; // do nothing while paused via hover
 
         const maxScroll = carousel.scrollWidth - carousel.clientWidth;
         const currentScroll = carousel.scrollLeft;
 
         if (currentScroll >= maxScroll) {
+          // Reset to the beginning when we've reached the end of the scroll range
           carousel.scrollTo({ left: 0, behavior: "smooth" });
         } else {
+          // Advance by ~90% of the visible width for an overlapping, smooth carousel effect
           carousel.scrollBy({ left: carousel.clientWidth * 0.9, behavior: "smooth" });
         }
       }, 4000);
     };
 
+    // Toggle pause while the user hovers the carousel
     const handleMouseEnter = () => (isPaused = true);
     const handleMouseLeave = () => (isPaused = false);
 
@@ -38,6 +46,7 @@ export default function CompanionLandingPage() {
 
     startAutoScroll();
 
+    // Cleanup the interval and listeners when the component unmounts
     return () => {
       clearInterval(scrollInterval);
       carousel.removeEventListener("mouseenter", handleMouseEnter);
@@ -266,6 +275,8 @@ export default function CompanionLandingPage() {
           <div className="relative">
             <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-16 bg-gradient-to-r from-secondary/20 to-transparent" />
             <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-16 bg-gradient-to-l from-secondary/20 to-transparent" />
+            {/* Horizontal snap-scrolling container for the feature cards. We hide native scrollbars
+                and rely on CSS scroll snapping for a smooth carousel feel. */}
             <div ref={carouselRef} className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {[
               {
