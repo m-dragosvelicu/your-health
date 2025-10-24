@@ -25,6 +25,9 @@ declare module "next-auth" {
   //   // role: UserRole;
   // }
 }
+if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+  throw new Error("Missing Google OAuth env vars");
+}
 
 /**
  * Options for NextAuth.js used to configure adapters, providers, callbacks, etc.
