@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { Button } from "~/components/ui/button";
 
 // Inline brand SVG icons to replace deprecated lucide variants
@@ -20,7 +22,7 @@ const GoogleLogo = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-const FacebookLogo = (props: React.SVGProps<SVGSVGElement>) => (
+const DiscordLogo = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     viewBox="0 0 24 24"
     xmlns="http://www.w3.org/2000/svg"
@@ -28,25 +30,40 @@ const FacebookLogo = (props: React.SVGProps<SVGSVGElement>) => (
     aria-hidden
     {...props}
   >
-    <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078V12.07h3.047V9.413c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953h-1.513c-1.491 0-1.953.925-1.953 1.874v2.264h3.328l-.532 3.472h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-  </svg>
-);
-
-const AppleLogo = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    viewBox="0 0 24 24"
-    xmlns="http://www.w3.org/2000/svg"
-    fill="currentColor"
-    aria-hidden
-    {...props}
-  >
-    <path d="M18.71 19.5C17.88 20.74 17 21.95 15.66 21.97C14.32 22 13.89 21.18 12.37 21.18C10.84 21.18 10.37 21.95 9.09997 22C7.78997 22.05 6.79997 20.68 5.95997 19.47C4.24997 17 2.93997 12.45 4.69997 9.39C5.56997 7.87 7.12997 6.91 8.81997 6.88C10.1 6.86 11.32 7.75 12.11 7.75C12.89 7.75 14.37 6.68 15.92 6.84C16.57 6.87 18.39 7.1 19.56 8.82C19.47 8.88 17.39 10.1 17.41 12.63C17.44 15.65 20.06 16.66 20.09 16.67C20.06 16.74 19.67 18.11 18.71 19.5ZM13 3.5C13.73 2.67 14.94 2.04 15.94 2C16.07 3.17 15.6 4.35 14.9 5.19C14.21 6.04 13.07 6.7 11.95 6.61C11.8 5.46 12.36 4.26 13 3.5Z"/>
+    <path d="M20.82 4.62A17.62 17.62 0 0 0 16.52 3a12.38 12.38 0 0 0-.58 1.19 16.76 16.76 0 0 0-4-.1a15.32 15.32 0 0 0-.67-1.16 17.56 17.56 0 0 0-4.3 1.66A20.2 20.2 0 0 0 3 17.34a17.94 17.94 0 0 0 5.27 2.7 13 13 0 0 0 1.12-1.7 10.84 10.84 0 0 1-1.76-.85c.15-.11.3-.23.44-.35a12.5 12.5 0 0 0 10.9 0c.14.12.29.24.44.35a11.88 11.88 0 0 1-1.81.88 11.7 11.7 0 0 0 1.14 1.68 17.84 17.84 0 0 0 5.26-2.7 20.07 20.07 0 0 0-3.18-12.33ZM9.55 15.26c-1.05 0-1.9-1-1.9-2.26s.83-2.27 1.9-2.27 1.92 1 1.9 2.27-.85 2.26-1.9 2.26Zm4.9 0c-1.05 0-1.9-1-1.9-2.26s.83-2.27 1.9-2.27 1.92 1 1.9 2.27-.85 2.26-1.9 2.26Z" />
   </svg>
 );
 
 export default function AuthPage() {
   // Local UI state for switching between sign-up and login modes
   const [mode, setMode] = useState<"signup" | "login">("signup");
+  const [loadingProvider, setLoadingProvider] = useState<"google" | "discord" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+
+  const handleOAuthSignIn = useCallback(
+    async (provider: "google" | "discord") => {
+      setError(null);
+      setLoadingProvider(provider);
+      try {
+        const response = await signIn(provider, {
+          callbackUrl,
+        });
+
+        if (response?.error) {
+          setError("We couldn\u2019t complete the sign-in. Please try again.");
+        }
+      } catch (err) {
+        console.error(`Error during ${provider} sign-in`, err);
+        setError("We couldn\u2019t complete the sign-in. Please try again.");
+      } finally {
+        setLoadingProvider(null);
+      }
+    },
+    [callbackUrl],
+  );
 
   const isSignup = mode === "signup";
 
@@ -185,21 +202,39 @@ export default function AuthPage() {
                 </div>
               </div>
 
-              {/* OAuth buttons (placeholders): wire these up to your auth provider callbacks */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <Button type="button" variant="outline" className="w-full">
+              {/* OAuth provider buttons, wired to NextAuth handlers */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => void handleOAuthSignIn("google")}
+                  disabled={loadingProvider !== null}
+                >
                   <GoogleLogo className="size-4" aria-hidden />
-                  <span className="sm:not-sr-only sm:whitespace-nowrap">Google</span>
+                  <span className="sm:not-sr-only sm:whitespace-nowrap">
+                    {loadingProvider === "google" ? "Connecting..." : "Google"}
+                  </span>
                 </Button>
-                <Button type="button" variant="outline" className="w-full">
-                  <FacebookLogo className="size-4" aria-hidden />
-                  <span className="sm:not-sr-only sm:whitespace-nowrap">Facebook</span>
-                </Button>
-                <Button type="button" variant="outline" className="w-full">
-                  <AppleLogo className="size-5" aria-hidden />
-                  <span className="sm:not-sr-only sm:whitespace-nowrap">Apple</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => void handleOAuthSignIn("discord")}
+                  disabled={loadingProvider !== null}
+                >
+                  <DiscordLogo className="size-4" aria-hidden />
+                  <span className="sm:not-sr-only sm:whitespace-nowrap">
+                    {loadingProvider === "discord" ? "Connecting..." : "Discord"}
+                  </span>
                 </Button>
               </div>
+
+              {error && (
+                <p className="text-sm text-destructive" role="alert" aria-live="polite">
+                  {error}
+                </p>
+              )}
             </form>
           </div>
 
