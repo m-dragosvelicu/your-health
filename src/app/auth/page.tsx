@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { Suspense, useCallback, useState, useTransition } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -34,14 +34,82 @@ const DiscordLogo = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-export default function AuthPage() {
+function AuthPageContent() {
   // Local UI state for switching between sign-up and login modes
   const [mode, setMode] = useState<"signup" | "login">("signup");
   const [loadingProvider, setLoadingProvider] = useState<"google" | "discord" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+
+    const form = new FormData(e.currentTarget);
+    const nameValue = form.get("name");
+    const name = typeof nameValue === "string" ? nameValue.trim() : "";
+    const emailValue = form.get("email");
+    const email = typeof emailValue === "string" ? emailValue.trim().toLowerCase() : "";
+    const passwordValue = form.get("password");
+    const password = typeof passwordValue === "string" ? passwordValue : "";
+    const confirmValue = form.get("confirm");
+    const confirm = typeof confirmValue === "string" ? confirmValue : "";
+
+    if (mode === "signup") {
+      if (password !== confirm) {
+        setError("Passwords do not match.");
+        return;
+      }
+
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name || undefined, email, password }),
+      });
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(data?.error ?? "Registration failed.");
+        return;
+      }
+
+      const signInRes = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (signInRes?.error) {
+        setError("Account created but sign-in failed. Try logging in.");
+        return;
+      }
+
+      startTransition(() => {
+        window.location.assign(callbackUrl);
+      });
+      return;
+    }
+
+    // Login flow
+    const signInRes = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+      callbackUrl,
+    });
+
+    if (signInRes?.error) {
+      setError("Invalid email or password.");
+      return;
+    }
+
+    startTransition(() => {
+      window.location.assign(callbackUrl);
+    });
+  }
 
   const handleOAuthSignIn = useCallback(
     async (provider: "google" | "discord") => {
@@ -112,15 +180,18 @@ export default function AuthPage() {
               <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
                 {isSignup ? "Create your account" : "Welcome back"}
               </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {isSignup ? "Start your health journey in minutes." : "Log in to continue to your dashboard."}
-              </p>
+              <button
+                onClick={() => setMode((m) => (m === "signup" ? "login" : "signup"))}
+                className="text-sm underline underline-offset-4"
+              >
+                {mode === "signup" ? "Have an account? Log in" : "New here? Sign up"}
+              </button>
             </div>
 
             {/* Form */}
             {/* Demo-only: prevent actual submission; integrate with your auth logic (NextAuth, tRPC mutation, etc.) */}
-            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-              {isSignup && (
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              {mode === "signup" && (
                 <div className="space-y-2">
                   <label htmlFor="name" className="text-sm font-medium">
                     Name
@@ -131,7 +202,7 @@ export default function AuthPage() {
                     type="text"
                     placeholder="Your full name"
                     autoComplete="name"
-                    className="h-10 w-full rounded-md border bg-background px-3 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="h-10 w-full rounded-md border bg-background px-3 text-sm shadow-xs"
                   />
                 </div>
               )}
@@ -144,9 +215,10 @@ export default function AuthPage() {
                   id="email"
                   name="email"
                   type="email"
+                  required
                   placeholder="you@example.com"
                   autoComplete="email"
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm shadow-xs"
                 />
               </div>
 
@@ -158,13 +230,14 @@ export default function AuthPage() {
                   id="password"
                   name="password"
                   type="password"
-                  placeholder={isSignup ? "Create a strong password" : "Your password"}
-                  autoComplete={isSignup ? "new-password" : "current-password"}
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  required
+                  placeholder={mode === "signup" ? "Create a strong password" : "Your password"}
+                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm shadow-xs"
                 />
               </div>
 
-              {isSignup && (
+              {mode === "signup" && (
                 <div className="space-y-2">
                   <label htmlFor="confirm" className="text-sm font-medium">
                     Confirm password
@@ -173,61 +246,56 @@ export default function AuthPage() {
                     id="confirm"
                     name="confirm"
                     type="password"
+                    required
                     placeholder="Repeat your password"
                     autoComplete="new-password"
-                    className="h-10 w-full rounded-md border bg-background px-3 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="h-10 w-full rounded-md border bg-background px-3 text-sm shadow-xs"
                   />
                 </div>
               )}
 
-              {!isSignup && (
-                <div className="flex justify-end text-sm">
-                  <Link href="#" className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+              <div className="flex items-center justify-between text-sm">
+                {mode === "login" ? (
+                  <Link href="#" className="text-muted-foreground underline-offset-4 hover:underline">
                     Forgot password?
                   </Link>
-                </div>
-              )}
-
-              <Button type="submit" className="w-full text-sm sm:text-base">
-                {isSignup ? "Create account" : "Login"}
-              </Button>
-
-              {/* Divider */}
-              <div className="relative py-2">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">or continue with</span>
-                </div>
+                ) : (
+                  <span />
+                )}
+                {isPending && <span className="text-xs text-muted-foreground">Processing…</span>}
               </div>
 
-              {/* OAuth provider buttons, wired to NextAuth handlers */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => void handleOAuthSignIn("google")}
-                  disabled={loadingProvider !== null}
-                >
-                  <GoogleLogo className="size-4" aria-hidden />
-                  <span className="sm:not-sr-only sm:whitespace-nowrap">
-                    {loadingProvider === "google" ? "Connecting..." : "Google"}
-                  </span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => void handleOAuthSignIn("discord")}
-                  disabled={loadingProvider !== null}
-                >
-                  <DiscordLogo className="size-4" aria-hidden />
-                  <span className="sm:not-sr-only sm:whitespace-nowrap">
-                    {loadingProvider === "discord" ? "Connecting..." : "Discord"}
-                  </span>
-                </Button>
+              <Button type="submit" className="w-full text-sm sm:text-base" disabled={isPending}>
+                {mode === "signup" ? "Create account" : "Login"}
+              </Button>
+
+              {/* OAuth sign-in options */}
+              <div className="relative py-2">
+                <div className="my-2 flex items-center gap-2">
+                  <div className="h-px flex-1 bg-border" />
+                  <span className="text-xs text-muted-foreground">or continue with</span>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleOAuthSignIn("google")}
+                    disabled={isPending || loadingProvider === "google"}
+                  >
+                    <GoogleLogo className="mr-2 h-4 w-4" aria-hidden />
+                    {loadingProvider === "google" ? "Signing in..." : "Google"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleOAuthSignIn("discord")}
+                    disabled={isPending || loadingProvider === "discord"}
+                  >
+                    <DiscordLogo className="mr-2 h-4 w-4" aria-hidden />
+                    {loadingProvider === "discord" ? "Signing in..." : "Discord"}
+                  </Button>
+                </div>
               </div>
 
               {error && (
@@ -255,5 +323,13 @@ export default function AuthPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-center text-sm text-muted-foreground">Loading…</div>}>
+      <AuthPageContent />
+    </Suspense>
   );
 }
