@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useCallback, useState, useTransition } from "react";
+import { Suspense, useCallback, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Button } from "~/components/ui/button";
 
@@ -36,13 +36,53 @@ const DiscordLogo = (props: React.SVGProps<SVGSVGElement>) => (
 
 function AuthPageContent() {
   // Local UI state for switching between sign-up and login modes
-  const [mode, setMode] = useState<"signup" | "login">("signup");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialMode = searchParams.get("mode") === "login" ? "login" : "signup";
+  const initialEmailParam = searchParams.get("email");
+  const [mode, setMode] = useState<"signup" | "login">(initialMode);
+  const [emailValue, setEmailValue] = useState(initialEmailParam ? initialEmailParam.trim() : "");
   const [loadingProvider, setLoadingProvider] = useState<"google" | "discord" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const emailInputRef = useRef<HTMLInputElement>(null);
 
-  const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+
+  const syncAuthQuery = useCallback(
+    (nextMode: "signup" | "login", emailParam?: string | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("mode", nextMode);
+      if (emailParam !== undefined) {
+        const trimmedEmail = emailParam?.trim() ?? "";
+        if (trimmedEmail) {
+          params.set("email", trimmedEmail);
+        } else {
+          params.delete("email");
+        }
+      }
+      const queryString = params.toString();
+      router.replace(queryString ? `/auth?${queryString}` : "/auth", { scroll: false });
+    },
+    [router, searchParams],
+  );
+
+  const changeMode = useCallback(
+    (nextMode: "signup" | "login", options?: { email?: string | null; focusEmail?: boolean }) => {
+      setMode(nextMode);
+      syncAuthQuery(nextMode, options?.email ?? undefined);
+      if (options?.email !== undefined) {
+        setEmailValue((options.email ?? "").trim());
+      }
+      if (options?.focusEmail) {
+        requestAnimationFrame(() => {
+          emailInputRef.current?.focus();
+        });
+      }
+      setError(null);
+    },
+    [syncAuthQuery],
+  );
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -51,8 +91,10 @@ function AuthPageContent() {
     const form = new FormData(e.currentTarget);
     const nameValue = form.get("name");
     const name = typeof nameValue === "string" ? nameValue.trim() : "";
-    const emailValue = form.get("email");
-    const email = typeof emailValue === "string" ? emailValue.trim().toLowerCase() : "";
+    const formEmail = form.get("email");
+    const trimmedEmail = typeof formEmail === "string" ? formEmail.trim() : "";
+    const email = trimmedEmail.toLowerCase();
+    setEmailValue(trimmedEmail);
     const passwordValue = form.get("password");
     const password = typeof passwordValue === "string" ? passwordValue : "";
     const confirmValue = form.get("confirm");
@@ -72,6 +114,12 @@ function AuthPageContent() {
 
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
+        if (res.status === 409) {
+          changeMode("login", { email: trimmedEmail, focusEmail: true });
+          setError(data?.error ?? "An account with this email already exists. Please log in.");
+          return;
+        }
+
         setError(data?.error ?? "Registration failed.");
         return;
       }
@@ -88,7 +136,7 @@ function AuthPageContent() {
       }
 
       startTransition(() => {
-        window.location.assign(callbackUrl);
+        window.location.assign("/");
       });
       return;
     }
@@ -158,7 +206,7 @@ function AuthPageContent() {
                     isSignup ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                   }`}
                   aria-pressed={isSignup}
-                  onClick={() => setMode("signup")}
+                  onClick={() => changeMode("signup")}
                 >
                   Sign up
                 </button>
@@ -168,7 +216,7 @@ function AuthPageContent() {
                     !isSignup ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                   }`}
                   aria-pressed={!isSignup}
-                  onClick={() => setMode("login")}
+                  onClick={() => changeMode("login")}
                 >
                   Login
                 </button>
@@ -181,7 +229,7 @@ function AuthPageContent() {
                 {isSignup ? "Create your account" : "Welcome back"}
               </h1>
               <button
-                onClick={() => setMode((m) => (m === "signup" ? "login" : "signup"))}
+                onClick={() => changeMode(mode === "signup" ? "login" : "signup")}
                 className="text-sm underline underline-offset-4"
               >
                 {mode === "signup" ? "Have an account? Log in" : "New here? Sign up"}
@@ -218,6 +266,9 @@ function AuthPageContent() {
                   required
                   placeholder="you@example.com"
                   autoComplete="email"
+                  value={emailValue}
+                  onChange={(event) => setEmailValue(event.target.value)}
+                  ref={emailInputRef}
                   className="h-10 w-full rounded-md border bg-background px-3 text-sm shadow-xs"
                 />
               </div>
