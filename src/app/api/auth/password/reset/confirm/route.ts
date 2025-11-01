@@ -55,6 +55,22 @@ export async function POST(req: Request) {
       );
     }
 
+    const existingCredentials = await db.credentials.findUnique({
+      where: { email },
+      select: { passwordHash: true },
+    });
+
+    if (existingCredentials?.passwordHash) {
+      const isSamePassword = await bcrypt.compare(password, existingCredentials.passwordHash);
+      if (isSamePassword) {
+        await recordAttempt({ action: "password-reset-confirm", email, ip }, false);
+        return NextResponse.json(
+          { ok: false, error: "Your new password must be different from your current password." },
+          { status: 400 },
+        );
+      }
+    }
+
     const passwordHash = await bcrypt.hash(password, 12);
 
     await db.credentials.upsert({

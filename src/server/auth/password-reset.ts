@@ -136,24 +136,6 @@ export async function consumePasswordResetToken(email: string, token: string) {
   return { valid: true as const, userId };
 }
 
-// export async function sendPasswordResetEmail(payload: ResetEmailPayload) {
-//   const message = createResetEmail(payload);
-
-//   await transporter.sendMail({
-//     from: env.EMAIL_FROM,
-//     to: message.to,
-//     subject: message.subject,
-//     text: message.text,
-//     html: message.html,
-//   });
-
-//   if (env.NODE_ENV !== "production") {
-//     console.info(
-//       `[password-reset] Sent reset email to ${payload.email}: ${payload.resetUrl}`,
-//     );
-//   }
-// }
-
 export async function sendPasswordResetEmail(payload: ResetEmailPayload) {
   const message = createResetEmail(payload);
 

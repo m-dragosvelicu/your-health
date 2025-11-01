@@ -50,10 +50,10 @@ export async function POST(req: Request) {
   const { email } = parsed.data;
 
   try {
-    // await rateLimitOrThrow(
-    //   { action: "password-reset-request", email, ip },
-    //   { windowMinutes: 15, maxAttempts: 5 },
-    // );
+    await rateLimitOrThrow(
+      { action: "password-reset-request", email, ip },
+      { windowMinutes: 15, maxAttempts: 5 },
+    );
 
     // Determine if an account exists either directly in User or via Credentials
     const user = await db.user.findUnique({
