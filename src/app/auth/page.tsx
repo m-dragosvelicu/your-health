@@ -34,25 +34,40 @@ const DiscordLogo = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+type AuthMode = "signup" | "login" | "reset-password" | "reset-request";
+
 function AuthPageContent() {
   // Local UI state for switching between sign-up and login modes
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialMode = searchParams.get("mode") === "login" ? "login" : "signup";
+  const token = searchParams.get("token");
+  const modeParam = searchParams.get("mode");
+  const initialMode: AuthMode =
+    token
+      ? "reset-password"
+      : modeParam === "login"
+        ? "login"
+        : modeParam === "reset-request" || modeParam === "reset" || modeParam === "reset-password"
+          ? "reset-request"
+          : "signup";
   const initialEmailParam = searchParams.get("email");
-  const [mode, setMode] = useState<"signup" | "login">(initialMode);
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [emailValue, setEmailValue] = useState(initialEmailParam ? initialEmailParam.trim() : "");
   const [loadingProvider, setLoadingProvider] = useState<"google" | "discord" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const emailInputRef = useRef<HTMLInputElement>(null);
 
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
 
   const syncAuthQuery = useCallback(
-    (nextMode: "signup" | "login", emailParam?: string | null) => {
+    (nextMode: AuthMode, emailParam?: string | null) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set("mode", nextMode);
+      if (nextMode !== "reset-password") {
+        params.delete("token");
+      }
       if (emailParam !== undefined) {
         const trimmedEmail = emailParam?.trim() ?? "";
         if (trimmedEmail) {
@@ -68,7 +83,7 @@ function AuthPageContent() {
   );
 
   const changeMode = useCallback(
-    (nextMode: "signup" | "login", options?: { email?: string | null; focusEmail?: boolean }) => {
+    (nextMode: AuthMode, options?: { email?: string | null; focusEmail?: boolean }) => {
       setMode(nextMode);
       syncAuthQuery(nextMode, options?.email ?? undefined);
       if (options?.email !== undefined) {
@@ -79,14 +94,19 @@ function AuthPageContent() {
           emailInputRef.current?.focus();
         });
       }
+      setNotice(null);
       setError(null);
     },
     [syncAuthQuery],
   );
+  const handleForgotPassword = useCallback(() => {
+    changeMode("reset-request", { focusEmail: true });
+  }, [changeMode]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setNotice(null);
 
     const form = new FormData(e.currentTarget);
     const nameValue = form.get("name");
@@ -99,6 +119,56 @@ function AuthPageContent() {
     const password = typeof passwordValue === "string" ? passwordValue : "";
     const confirmValue = form.get("confirm");
     const confirm = typeof confirmValue === "string" ? confirmValue : "";
+
+    if (mode === "reset-request") {
+      if (!trimmedEmail) {
+        setError("Please enter the email associated with your account.");
+        return;
+      }
+
+      const res = await fetch("/api/auth/password/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(data?.error ?? "We couldn't start the reset process. Please try again.");
+        return;
+      }
+
+      setNotice("If an account exists for that email, you'll receive a reset link shortly.");
+      return;
+    }
+
+    if (mode === "reset-password") {
+      if (!token) {
+        setError("Invalid or missing reset token.");
+        return;
+      }
+      if (password !== confirm) {
+        setError("Passwords do not match.");
+        return;
+      }
+
+      const res = await fetch("/api/auth/password/reset/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, token, password }),
+      });
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(data?.error ?? "Failed to reset password. The link may be invalid or expired.");
+        return;
+      }
+
+      changeMode("login", { email: trimmedEmail, focusEmail: true });
+      // Show a success message or automatically sign in
+      alert("Password has been reset successfully. Please log in with your new password.");
+      return;
+    }
 
     if (mode === "signup") {
       if (password !== confirm) {
@@ -182,6 +252,8 @@ function AuthPageContent() {
   );
 
   const isSignup = mode === "signup";
+  const isReset = mode === "reset-password";
+  const isResetRequest = mode === "reset-request";
 
   return (
     <main className="min-h-svh bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-background to-background">
@@ -190,7 +262,7 @@ function AuthPageContent() {
           {/* Card */}
           <div className="relative overflow-hidden rounded-xl border bg-card/95 p-5 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/80 sm:p-6 md:p-8">
             {/* Toggle */}
-            <div className="mb-6 flex justify-center">
+            {!(isReset || isResetRequest) && <div className="mb-6 flex justify-center">
               <div className="relative inline-flex w-full max-w-xs items-center rounded-full border bg-background p-1 text-sm">
                 {/* Sliding indicator */}
                 {/* Sliding pill indicator that moves between "Sign up" and "Login" based on current mode */}
@@ -221,24 +293,53 @@ function AuthPageContent() {
                   Login
                 </button>
               </div>
-            </div>
+            </div>}
 
             {/* Title */}
             <div className="mb-6 text-center">
               <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                {isSignup ? "Create your account" : "Welcome back"}
+                {isReset
+                  ? "Reset your password"
+                  : isResetRequest
+                    ? "Forgot your password?"
+                    : isSignup
+                      ? "Create your account"
+                      : "Welcome back"}
               </h1>
-              <button
-                onClick={() => changeMode(mode === "signup" ? "login" : "signup")}
-                className="text-sm underline underline-offset-4"
-              >
-                {mode === "signup" ? "Have an account? Log in" : "New here? Sign up"}
-              </button>
+              {isReset && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Choose a new password to secure your account.
+                </p>
+              )}
+              {isResetRequest && (
+                <>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Enter your account email and we&apos;ll send you a reset link.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => changeMode("login", { focusEmail: true })}
+                    className="text-sm underline underline-offset-4"
+                  >
+                    Remember your password? Log in
+                  </button>
+                </>
+              )}
+              {!(isReset || isResetRequest) && (
+                <button
+                  type="button"
+                  onClick={() => changeMode(mode === "signup" ? "login" : "signup")}
+                  className="text-sm underline underline-offset-4"
+                >
+                  {mode === "signup" ? "Have an account? Log in" : "New here? Sign up"}
+                </button>
+              )}
             </div>
 
             {/* Form */}
             {/* Demo-only: prevent actual submission; integrate with your auth logic (NextAuth, tRPC mutation, etc.) */}
             <form className="space-y-4" onSubmit={handleSubmit}>
+              {/* The `name` field is only for signup */}
               {mode === "signup" && (
                 <div className="space-y-2">
                   <label htmlFor="name" className="text-sm font-medium">
@@ -256,6 +357,7 @@ function AuthPageContent() {
               )}
 
               <div className="space-y-2">
+                {/* The email field is read-only during password reset */}
                 <label htmlFor="email" className="text-sm font-medium">
                   Email
                 </label>
@@ -269,25 +371,28 @@ function AuthPageContent() {
                   value={emailValue}
                   onChange={(event) => setEmailValue(event.target.value)}
                   ref={emailInputRef}
+                  readOnly={isReset}
                   className="h-10 w-full rounded-md border bg-background px-3 text-sm shadow-xs"
                 />
               </div>
 
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  placeholder={mode === "signup" ? "Create a strong password" : "Your password"}
-                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm shadow-xs"
-                />
-              </div>
-
+              {!isResetRequest && (
+                <div className="space-y-2">
+                  <label htmlFor="password" className="text-sm font-medium">
+                    Password
+                  </label>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    required
+                    placeholder={isSignup ? "Create a strong password" : isReset ? "Enter new password" : "Your password"}
+                    autoComplete={isSignup || isReset ? "new-password" : "current-password"}
+                    className="h-10 w-full rounded-md border bg-background px-3 text-sm shadow-xs"
+                  />
+                </div>
+              )}
+              {/* The "confirm password" field is for signup and reset */}
               {mode === "signup" && (
                 <div className="space-y-2">
                   <label htmlFor="confirm" className="text-sm font-medium">
@@ -305,23 +410,44 @@ function AuthPageContent() {
                 </div>
               )}
 
+              {isReset && (
+                  <div className="space-y-2">
+                    <label htmlFor="confirm" className="text-sm font-medium">
+                      Confirm new password
+                    </label>
+                    <input
+                        id="confirm"
+                        name="confirm"
+                        type="password"
+                        required
+                        placeholder="Repeat new password"
+                        autoComplete="new-password"
+                        className="h-10 w-full rounded-md border bg-background px-3 text-sm shadow-xs"
+                    />
+                  </div>
+              )}
+
               <div className="flex items-center justify-between text-sm">
                 {mode === "login" ? (
-                  <Link href="#" className="text-muted-foreground underline-offset-4 hover:underline">
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    className="border-0 bg-transparent p-0 text-muted-foreground underline-offset-4 hover:underline"
+                  >
                     Forgot password?
-                  </Link>
+                  </button>
                 ) : (
                   <span />
                 )}
-                {isPending && <span className="text-xs text-muted-foreground">Processing…</span>}
+                {isPending && <span className="text-xs text-muted-foreground">Processing...</span>}
               </div>
 
               <Button type="submit" className="w-full text-sm sm:text-base" disabled={isPending}>
-                {mode === "signup" ? "Create account" : "Login"}
+                {isReset ? "Set new password" : isResetRequest ? "Send reset link" : isSignup ? "Create account" : "Login"}
               </Button>
 
               {/* OAuth sign-in options */}
-              <div className="relative py-2">
+              {!(isReset || isResetRequest) && <div className="relative py-2">
                 <div className="my-2 flex items-center gap-2">
                   <div className="h-px flex-1 bg-border" />
                   <span className="text-xs text-muted-foreground">or continue with</span>
@@ -347,7 +473,13 @@ function AuthPageContent() {
                     {loadingProvider === "discord" ? "Signing in..." : "Discord"}
                   </Button>
                 </div>
-              </div>
+              </div>}
+
+              {notice && (
+                <p className="text-sm text-emerald-600 dark:text-emerald-500" role="status" aria-live="polite">
+                  {notice}
+                </p>
+              )}
 
               {error && (
                 <p className="text-sm text-destructive" role="alert" aria-live="polite">

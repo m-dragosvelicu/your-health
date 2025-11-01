@@ -14,6 +14,13 @@ export const env = createEnv({
     AUTH_DISCORD_ID: z.string(),
     AUTH_DISCORD_SECRET: z.string(),
     DATABASE_URL: z.string().url(),
+    EMAIL_FROM: z.string(),
+    
+    SMTP_HOST: z.string(),
+    SMTP_PORT: z.coerce.number().int().positive(),
+    SMTP_USER: z.string(),
+    SMTP_PASSWORD: z.string(),
+    SMTP_SECURE: z.coerce.boolean().default(false),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -37,6 +44,12 @@ export const env = createEnv({
     AUTH_DISCORD_ID: process.env.AUTH_DISCORD_ID,
     AUTH_DISCORD_SECRET: process.env.AUTH_DISCORD_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
+    EMAIL_FROM: process.env.EMAIL_FROM,
+    SMTP_HOST: process.env.SMTP_HOST,
+    SMTP_PORT: process.env.SMTP_PORT,
+    SMTP_USER: process.env.SMTP_USER,
+    SMTP_PASSWORD: process.env.SMTP_PASSWORD,
+    SMTP_SECURE: process.env.SMTP_SECURE,
     NODE_ENV: process.env.NODE_ENV,
   },
   /**

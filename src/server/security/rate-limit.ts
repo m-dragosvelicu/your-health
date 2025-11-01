@@ -1,7 +1,12 @@
 import { subMinutes } from "date-fns";
 import { db } from "~/server/db";
 
-type RateAction = "login" | "register" | "set-password";
+type RateAction =
+  | "login"
+  | "register"
+  | "set-password"
+  | "password-reset-request"
+  | "password-reset-confirm";
 type RateKey = {
   email?: string;
   ip?: string | null;
