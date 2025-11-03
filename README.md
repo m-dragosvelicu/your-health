@@ -125,3 +125,6 @@ You can deploy to any Next.js‑compatible platform (Vercel, Netlify, Docker, et
 - `npm start`
 
 For more on the T3 Stack, see https://create.t3.gg/. 
+
+
+<!-- The project’s public landing page is the home route `/`. -->
