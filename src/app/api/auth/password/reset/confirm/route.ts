@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
-import { consumePasswordResetToken } from "~/server/auth/password-reset";
-import { db } from "~/server/db";
-import { getClientIp } from "~/server/http/ip";
-import { HttpError, rateLimitOrThrow, recordAttempt } from "~/server/security/rate-limit";
+import { consumePasswordResetToken } from "@/features/auth/lib/password-reset";
+import { db } from "@/shared/server/db";
+import { getClientIp } from "@/shared/server/http/ip";
+import { HttpError, rateLimitOrThrow, recordAttempt } from "@/shared/server/security/rate-limit";
 
 const PasswordResetConfirmSchema = z.object({
   email: z.string().email().transform((value) => value.trim().toLowerCase()),

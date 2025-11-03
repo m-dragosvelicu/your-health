@@ -1,11 +1,12 @@
-import "~/styles/globals.css";
+import "@/shared/styles/globals.css";
 
 import { type Metadata } from "next";
 import { Geist } from "next/font/google";
 import Script from "next/script";
 
 import { TRPCReactProvider } from "~/trpc/trpc-provider";
-import ThemeToggle from "~/components/theme-toggle";
+import { AuthSessionProvider } from "@/shared/components/session-provider";
+import ThemeToggle from "@/shared/components/theme-toggle";
 import React from "react";
 
 // App-wide metadata for the Next.js App Router. This is used to populate <head>
@@ -33,10 +34,13 @@ export default function RootLayout({
         <Script id="theme-init" strategy="beforeInteractive">{
           `try{var d=window.document.documentElement;var s=localStorage.getItem('theme');var m=window.matchMedia('(prefers-color-scheme: dark)');var isDark=s==='dark'||(s!=='light'&&m.matches);if(isDark){d.classList.add('dark')}else{d.classList.remove('dark')}}catch(e){}`
         }</Script>
-        {/* Provide tRPC client context to enable hooks in client components */}
-        <TRPCReactProvider>{children}</TRPCReactProvider>
-        {/* Floating theme toggle so users can switch between light/dark */}
-        <ThemeToggle />
+        {/* Provide session context for authentication */}
+        <AuthSessionProvider>
+          {/* Provide tRPC client context to enable hooks in client components */}
+          <TRPCReactProvider>{children}</TRPCReactProvider>
+          {/* Floating theme toggle so users can switch between light/dark */}
+          <ThemeToggle />
+        </AuthSessionProvider>
       </body>
     </html>
   );

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { db } from "~/server/db";
-import { auth } from "~/server/auth"; // from src/server/auth/index.ts
+import { db } from "@/shared/server/db";
+import { auth } from "@/shared/server/auth"; // from src/shared/server/auth/index.ts
 
 const SetPasswordSchema = z.object({
   currentPassword: z.string().min(0).max(100).optional(), // required if already have credentials

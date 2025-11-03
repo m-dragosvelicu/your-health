@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { createPasswordResetToken, sendPasswordResetEmail } from "~/server/auth/password-reset";
-import { db } from "~/server/db";
-import { getClientIp } from "~/server/http/ip";
-import { HttpError, rateLimitOrThrow, recordAttempt } from "~/server/security/rate-limit";
+import { createPasswordResetToken, sendPasswordResetEmail } from "@/features/auth/lib/password-reset";
+import { db } from "@/shared/server/db";
+import { getClientIp } from "@/shared/server/http/ip";
+import { HttpError, rateLimitOrThrow, recordAttempt } from "@/shared/server/security/rate-limit";
 
 const PasswordResetRequestSchema = z.object({
   email: z.string().email().transform((value) => value.trim().toLowerCase()),

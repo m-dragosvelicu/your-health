@@ -2,9 +2,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { db } from "~/server/db";
-import { rateLimitOrThrow, recordAttempt } from "~/server/security/rate-limit";
-import { getClientIp } from "~/server/http/ip";
+import { db } from "@/shared/server/db";
+import { rateLimitOrThrow, recordAttempt } from "@/shared/server/security/rate-limit";
+import { getClientIp } from "@/shared/server/http/ip";
 
 const RegisterSchema = z.object({
   name: z.string().min(1).max(100).optional(),

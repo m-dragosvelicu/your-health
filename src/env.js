@@ -13,13 +13,24 @@ export const env = createEnv({
         : z.string().optional(),
     AUTH_DISCORD_ID: z.string(),
     AUTH_DISCORD_SECRET: z.string(),
+    GOOGLE_CLIENT_ID:
+      process.env.NODE_ENV === "production" ? z.string() : z.string().optional(),
+    GOOGLE_CLIENT_SECRET:
+      process.env.NODE_ENV === "production" ? z.string() : z.string().optional(),
     DATABASE_URL: z.string().url(),
-    EMAIL_FROM: z.string(),
-    
-    SMTP_HOST: z.string(),
-    SMTP_PORT: z.coerce.number().int().positive(),
-    SMTP_USER: z.string(),
-    SMTP_PASSWORD: z.string(),
+    EMAIL_FROM:
+      process.env.NODE_ENV === "production" ? z.string() : z.string().optional(),
+
+    SMTP_HOST:
+      process.env.NODE_ENV === "production" ? z.string() : z.string().optional(),
+    SMTP_PORT:
+      process.env.NODE_ENV === "production"
+        ? z.coerce.number().int().positive()
+        : z.coerce.number().int().positive().optional(),
+    SMTP_USER:
+      process.env.NODE_ENV === "production" ? z.string() : z.string().optional(),
+    SMTP_PASSWORD:
+      process.env.NODE_ENV === "production" ? z.string() : z.string().optional(),
     SMTP_SECURE: z.coerce.boolean().default(false),
     NODE_ENV: z
       .enum(["development", "test", "production"])
@@ -43,6 +54,8 @@ export const env = createEnv({
     AUTH_SECRET: process.env.AUTH_SECRET,
     AUTH_DISCORD_ID: process.env.AUTH_DISCORD_ID,
     AUTH_DISCORD_SECRET: process.env.AUTH_DISCORD_SECRET,
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
     EMAIL_FROM: process.env.EMAIL_FROM,
     SMTP_HOST: process.env.SMTP_HOST,

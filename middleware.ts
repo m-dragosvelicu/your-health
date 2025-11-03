@@ -1,4 +1,4 @@
-import { auth } from "./src/server/auth";
+import { auth } from "./src/shared/server/auth";
 
 export default auth((req) => {
   // If there is no active session on a protected path → redirect to /auth
@@ -12,9 +12,7 @@ export default auth((req) => {
 // Tell Next.js which paths are protected by this middleware
 export const config = {
   matcher: [
-    "/app/:path*",        // example: future app dashboard
-    "/me/:path*",         // example: profile/settings
-    "/uploads/:path*",    // example: file uploads
-    "/api/private/:path*",// example: private API endpoints
+    "/dashboard/:path*",   // protect the signed-in app area
+    "/api/private/:path*", // protect any private API endpoints
   ],
 };
