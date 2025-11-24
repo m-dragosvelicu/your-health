@@ -39,16 +39,8 @@ const CredentialsSchema = z.object({
 export const authConfig = {
   adapter: PrismaAdapter(db),
 
-  // Using DB sessions is fine with PrismaAdapter; NextAuth will persist sessions to your DB
-  session: { strategy: "database" },
-  //   session: ({ session, user }) => ({
-  //     ...session,
-  //     user: {
-  //       ...session.user,
-  //       id: user.id,
-  //     },
-  //   }),
-  // },
+  // Credentials provider requires JWT strategy - database sessions don't work with it
+  session: { strategy: "jwt" },
 
   providers: [
     // Discord provider reads AUTH_DISCORD_ID / AUTH_DISCORD_SECRET automatically in v5
@@ -115,10 +107,17 @@ export const authConfig = {
   ],
 
   callbacks: {
-    async session({ session, user, token }) {
-      if (session.user) {
-        // With database strategy, `user` is usually present; `token.sub` is a fallback.
-        session.user.id = user?.id ?? token?.sub ?? session.user.id;
+    async jwt({ token, user }) {
+      // On sign-in, persist user.id into the JWT
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      // With JWT strategy, user info comes from the token
+      if (session.user && token.id) {
+        session.user.id = token.id as string;
       }
       return session;
     },

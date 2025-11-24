@@ -1,0 +1,338 @@
+{
+  "patient": {
+    "firstName": "Mihail Dragos",
+    "lastName": "Velicu",
+    "birthdate": "2004-07-07"
+  },
+  "meta": {
+    "provider": "Synevo Romania SRL",
+    "samplingDate": "2025-11-19T09:14:00",
+    "resultDate": "2025-11-20T06:56:00"
+  },
+  "tests": [
+    {
+      "testName": "Alanine Aminotransferase (GPT/ALAT/ALT)",
+      "value": 67,
+      "rawValue": "67",
+      "unit": "U/L",
+      "referenceRange": "< 50",
+      "status": "high",
+      "section": "Biochemistry"
+    },
+    {
+      "testName": "Aspartate Aminotransferase (GOT/ASAT/AST)",
+      "value": 26,
+      "rawValue": "26",
+      "unit": "U/L",
+      "referenceRange": "< 50",
+      "status": "normal",
+      "section": "Biochemistry"
+    },
+    {
+      "testName": "Albumin, Serum",
+      "value": 4.7,
+      "rawValue": "4.7",
+      "unit": "g/dL",
+      "referenceRange": "3.5 - 5.2",
+      "status": "normal",
+      "section": "Biochemistry"
+    },
+    {
+      "testName": "Direct Bilirubin",
+      "value": 0.306,
+      "rawValue": "0.306",
+      "unit": "mg/dL",
+      "referenceRange": "≤ 0.3",
+      "status": "high",
+      "section": "Biochemistry"
+    },
+    {
+      "testName": "Indirect Bilirubin",
+      "value": 0.221,
+      "rawValue": "0.221",
+      "unit": "mg/dL",
+      "referenceRange": "≤ 1",
+      "status": "normal",
+      "section": "Biochemistry"
+    },
+    {
+      "testName": "Alkaline Phosphatase",
+      "value": 185,
+      "rawValue": "185",
+      "unit": "U/L",
+      "referenceRange": "40 - 129",
+      "status": "high",
+      "section": "Biochemistry"
+    },
+    {
+      "testName": "Gama Glutamyl Transpherase (Glutamyltranspeptidase)",
+      "value": 346,
+      "rawValue": "346",
+      "unit": "U/L",
+      "referenceRange": "< 60",
+      "status": "high",
+      "section": "Biochemistry"
+    },
+    {
+      "testName": "Free T3 (FT3)",
+      "value": 4.4,
+      "rawValue": "4.4",
+      "unit": "pmol/L",
+      "referenceRange": "3.1 - 6.8",
+      "status": "normal",
+      "section": "Immunochemistry"
+    },
+    {
+      "testName": "Anti-Thyroglobulin Antibody",
+      "value": null,
+      "rawValue": "> 4000",
+      "unit": "IU/mL",
+      "referenceRange": "< 115",
+      "status": "high",
+      "section": "Immunochemistry"
+    },
+    {
+      "testName": "White Blood Cell Count (WBC)",
+      "value": 6.21,
+      "rawValue": "6.21",
+      "unit": "housand/µl",
+      "referenceRange": "4 - 10",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Red Blood Cell Count (RBC)",
+      "value": 5.15,
+      "rawValue": "5.15",
+      "unit": "mil./µL",
+      "referenceRange": "4.3 - 5.7",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Hemoglobin (Hb)",
+      "value": 15.5,
+      "rawValue": "15.5",
+      "unit": "g/dL",
+      "referenceRange": "13.2 - 17.3",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Hematocrit (Ht)",
+      "value": 44.5,
+      "rawValue": "44.5",
+      "unit": "%",
+      "referenceRange": "39 - 49",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Mean Corpuscular Volume (MCV)",
+      "value": 86.4,
+      "rawValue": "86.4",
+      "unit": "fL",
+      "referenceRange": "80 - 99",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Mean Corpuscular Hemoglobin (MCH)",
+      "value": 30.1,
+      "rawValue": "30.1",
+      "unit": "pg/cell",
+      "referenceRange": "27 - 34",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Mean Corpuscular Hemoglobin Concentration (MCHC)",
+      "value": 34.8,
+      "rawValue": "34.8",
+      "unit": "g/dL",
+      "referenceRange": "32 - 37",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Red Cell Distribution Width (RDW)",
+      "value": 11.8,
+      "rawValue": "11.8",
+      "unit": "%",
+      "referenceRange": "11.6 - 14.8",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Platelet Count",
+      "value": 263,
+      "rawValue": "263",
+      "unit": "housand/µl",
+      "referenceRange": "150 - 450",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Mean Platelet Volume (MPV)",
+      "value": 12,
+      "rawValue": "12",
+      "unit": "fL",
+      "referenceRange": "7.4 - 13",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Platelet Distribution Width (PDW)",
+      "value": 17.3,
+      "rawValue": "17.3",
+      "unit": "fL",
+      "referenceRange": "8 - 16.5",
+      "status": "high",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Neutrophil Percent",
+      "value": 49,
+      "rawValue": "49",
+      "unit": "%",
+      "referenceRange": "45 - 80",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Neutrophil Count",
+      "value": 3.04,
+      "rawValue": "3.04",
+      "unit": "housand/µl",
+      "referenceRange": "2 - 8",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Lymphocyte Percent",
+      "value": 39.8,
+      "rawValue": "39.8",
+      "unit": "%",
+      "referenceRange": "20 - 55",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Lymphocyte Count",
+      "value": 2.47,
+      "rawValue": "2.47",
+      "unit": "housand/µl",
+      "referenceRange": "1 - 4",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Monocyte Percent",
+      "value": 7.1,
+      "rawValue": "7.1",
+      "unit": "%",
+      "referenceRange": "≤ 15",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Monocyte Count",
+      "value": 0.44,
+      "rawValue": "0.44",
+      "unit": "housand/µl",
+      "referenceRange": "0.3 - 1",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Eosinophyl Percent",
+      "value": 3.5,
+      "rawValue": "3.5",
+      "unit": "%",
+      "referenceRange": "≤ 7",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Eosinophyl Count",
+      "value": 0.22,
+      "rawValue": "0.22",
+      "unit": "housand/µl",
+      "referenceRange": "0.05 - 0.7",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Basophyl Percent",
+      "value": 0.6,
+      "rawValue": "0.6",
+      "unit": "%",
+      "referenceRange": "≤ 2",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Basophyl Count",
+      "value": 0.04,
+      "rawValue": "0.04",
+      "unit": "housand/µl",
+      "referenceRange": "≤ 0.2",
+      "status": "normal",
+      "section": "Hematology"
+    },
+    {
+      "testName": "Time",
+      "value": 13.6,
+      "rawValue": "13.6",
+      "unit": "seconds",
+      "referenceRange": "11.7 - 15.3",
+      "status": "normal",
+      "section": "Prothrombin Time QUICK"
+    },
+    {
+      "testName": "Prothrombin percentage",
+      "value": 99,
+      "rawValue": "99",
+      "unit": "%",
+      "referenceRange": "> 70",
+      "status": "normal",
+      "section": "Prothrombin Time QUICK"
+    },
+    {
+      "testName": "INR",
+      "value": 1.01,
+      "rawValue": "1.01",
+      "unit": null,
+      "referenceRange": "Therapeutic interval of INR during treatment with oral anticoagulants (according to ACCP Guide 2008): INR = 2.0-3.0 (2.5) - for most clinical situations INR = 2.5-3.5 (3.0) - mechanical heart valves, repeated thromboembolic episodes in patients on anticoagulant therapy with INR: 2.0-3.0 INR = 3.0-4.0 (3.5) myocardial infarction, patient with thrombosis remitted by aortic mechanical valve prosthesis INR = 3.5-4.5 (4.0)- patients with thrombosis remitted by mitral mechanical valve prosthesis INR = 1.5-1.9 after the first 3 months of treatment, in which it is not possible to monitor the treatment by testing the INR at 4-week intervals - in patients with a first unprovoked episode of deep vein thrombosis or pulmonary thromboembolism.",
+      "status": null,
+      "section": "Prothrombin Time QUICK"
+    },
+    {
+      "testName": "TSH (Thyroid Stimulation Hormone)",
+      "value": 0.407,
+      "rawValue": "0.407",
+      "unit": "µIU/mL",
+      "referenceRange": "0.27 - 4.2",
+      "status": "normal",
+      "section": "Biochemistry"
+    },
+    {
+      "testName": "Free T4 (Free Thyroxine)",
+      "value": 17.1,
+      "rawValue": "17.1",
+      "unit": "pmol/L",
+      "referenceRange": "12 - 22",
+      "status": "normal",
+      "section": "Biochemistry"
+    },
+    {
+      "testName": "Anti-TPO Antibodies",
+      "value": 467,
+      "rawValue": "467",
+      "unit": "IU/mL",
+      "referenceRange": "< 34",
+      "status": "high",
+      "section": "Biochemistry"
+    }
+  ]
+}

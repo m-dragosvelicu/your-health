@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { SettingsDropdown } from "@/app/_components/settings-dropdown";
 
 // Dashboard shell applied to all /dashboard pages - using deep purple brand theme (light mode only)
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -16,7 +17,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <a href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</a>
             <a href="#" className="hover:text-foreground transition-colors">Labs</a>
             <a href="#" className="hover:text-foreground transition-colors">Medications</a>
-            <a href="#" className="hover:text-foreground transition-colors">Settings</a>
+            <SettingsDropdown />
           </nav>
         </div>
       </header>
@@ -24,4 +25,3 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
-
