@@ -203,7 +203,7 @@ export default function DashboardPage() {
           </div>
           <div className="p-6">
             <div className="mb-4 flex items-center justify-between">
-              <span className="text-sm font-medium">Today's Schedule</span>
+              <span className="text-sm font-medium">Today&apos;s Schedule</span>
               <span className="text-xs text-muted-foreground">92% adherence</span>
             </div>
             <div className="space-y-3">
@@ -499,4 +499,3 @@ export default function DashboardPage() {
     </section>
   );
 }
-

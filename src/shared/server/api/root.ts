@@ -1,6 +1,10 @@
 import { postRouter } from "@/features/posts";
 import { authRouter } from "@/features/auth";
 import { createCallerFactory, createTRPCRouter } from "@/shared/server/api/trpc";
+import { biomarkerRouter } from "./routers/biomarker";
+import { labReportRouter } from "./routers/lab-report";
+import { measurementRouter } from "./routers/measurement";
+
 /**
  * This is the primary router for your server.
  *
@@ -9,6 +13,9 @@ import { createCallerFactory, createTRPCRouter } from "@/shared/server/api/trpc"
 export const appRouter = createTRPCRouter({
   post: postRouter,
   auth: authRouter,
+  biomarker: biomarkerRouter,
+  labReport: labReportRouter,
+  measurement: measurementRouter,
 });
 
 // export type definition of API

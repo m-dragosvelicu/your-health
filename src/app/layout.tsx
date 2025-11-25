@@ -12,7 +12,11 @@ import React from "react";
 export const metadata: Metadata = {
   title: "Health Tracker",
   description: "Track your health data, medications, and lab results",
-  icons: [{ rel: "icon", url: "/favicon2.svg" }],
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
 };
 
 // Load the Geist font and expose its CSS variable so Tailwind can use it.

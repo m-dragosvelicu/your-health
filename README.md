@@ -87,6 +87,7 @@ AUTH_DISCORD_SECRET="your_discord_client_secret"
 4) Apply the database schema
 - Install dependencies: `npm install`
 - Generate and apply migrations: `npm run db:generate` (interactive) or `npm run db:push` (push schema without migrations)
+- Seed reference data (biomarkers, etc.): `npm run db:seed`
 
 5) Start the app
 - Dev server: `npm run dev` (http://localhost:3000)
@@ -99,6 +100,7 @@ AUTH_DISCORD_SECRET="your_discord_client_secret"
 - `npm run db:generate` — create/apply a new migration (dev)
 - `npm run db:migrate` — apply migrations in deploy environments
 - `npm run db:push` — push Prisma schema without migrations
+- `npm run db:seed` — populate canonical biomarkers
 - `npm run db:studio` — open Prisma Studio
 
 ## Data model
