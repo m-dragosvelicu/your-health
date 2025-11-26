@@ -21,7 +21,7 @@ export default function LabsDebugPage() {
           Biomarkers are read-only (seeded). Lab reports and measurements are user-scoped.
         </p>
         <p className="text-xs text-muted-foreground">
-          Quick links: <Link className="underline" href="/debug/biomarkers">Biomarkers</Link>
+          Quick links: <Link className="underline" href="/debug/biomarkers">Biomarkers</Link> | <Link className="underline" href="/debug/audit">Audit</Link>
         </p>
       </div>
 

@@ -1,7 +1,7 @@
+import { Prisma } from "@prisma/client";
 import type { AuditAction } from "@prisma/client";
 
-import type { Prisma } from "@prisma/client";
-
+import { getClientIp } from "@/shared/server/http/ip";
 import { db } from "@/shared/server/db";
 
 type AuditSubject = {
@@ -9,16 +9,40 @@ type AuditSubject = {
   id?: string | null;
 };
 
+type AuditMetadata = Prisma.InputJsonValue | undefined;
+
+type AuditRequestContext = {
+  request?: Request;
+  ip?: string | null;
+  userAgent?: string | null;
+};
+
+function resolveRequestContext(context: AuditRequestContext) {
+  const ip =
+    context.ip ??
+    (context.request ? getClientIp(context.request) : null) ??
+    null;
+  const userAgent =
+    context.userAgent ??
+    context.request?.headers.get("user-agent")?.slice(0, 500) ??
+    null;
+
+  return { ip, userAgent };
+}
+
 export async function logAudit(params: {
   userId?: string | null;
   action: AuditAction;
   subject?: AuditSubject;
-  metadata?: Record<string, unknown>;
-  ip?: string | null;
-  userAgent?: string | null;
-}) {
-  const { userId, action, subject, metadata, ip, userAgent } = params;
-  const metaValue = metadata as Prisma.InputJsonValue | undefined;
+  metadata?: AuditMetadata;
+} & AuditRequestContext) {
+  const { userId, action, subject, metadata, request, ip, userAgent } = params;
+  const { ip: resolvedIp, userAgent: resolvedUserAgent } = resolveRequestContext({
+    request,
+    ip,
+    userAgent,
+  });
+
   try {
     await db.auditLog.create({
       data: {
@@ -26,12 +50,15 @@ export async function logAudit(params: {
         action,
         subjectType: subject?.type ?? null,
         subjectId: subject?.id ?? null,
-        metadata: metaValue,
-        ip: ip ?? null,
-        userAgent: userAgent ?? null,
+        metadata: metadata ?? Prisma.JsonNull,
+        ip: resolvedIp,
+        userAgent: resolvedUserAgent,
       },
     });
-  } catch {
-    // best-effort; swallow errors in audit logging for MVP
+  } catch (error) {
+    console.error("Failed to log audit event:", {
+      error,
+      params,
+    });
   }
 }

@@ -1,8 +1,10 @@
-import { LabReportStatus, type Prisma } from "@prisma/client";
+import { AuditAction, LabReportStatus, type Prisma } from "@prisma/client";
 import type { NextRequest } from "next/server";
 
 import { auth } from "@/shared/server/auth";
 import { db } from "@/shared/server/db";
+import { logAudit } from "@/shared/server/audit";
+import { getClientIp } from "@/shared/server/http/ip";
 
 export const runtime = "nodejs";
 
@@ -83,6 +85,18 @@ export async function POST(req: NextRequest) {
       collectedAt: collectedAt ? new Date(collectedAt) : null,
       receivedAt: receivedAt ? new Date(receivedAt) : null,
     },
+  });
+
+  await logAudit({
+    action: AuditAction.LAB_REPORT_CREATE,
+    userId,
+    subject: { type: "LabReport", id: created.id },
+    metadata: {
+      providerName: created.providerName,
+      accessionNumber: created.accessionNumber,
+    },
+    request: req,
+    ip: getClientIp(req),
   });
 
   return Response.json(created, { status: 201 });

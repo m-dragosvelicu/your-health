@@ -1,8 +1,10 @@
-import { LabReportStatus } from "@prisma/client";
+import { AuditAction, LabReportStatus } from "@prisma/client";
 import type { NextRequest } from "next/server";
 
 import { auth } from "@/shared/server/auth";
 import { db } from "@/shared/server/db";
+import { logAudit } from "@/shared/server/audit";
+import { getClientIp } from "@/shared/server/http/ip";
 
 export const runtime = "nodejs";
 
@@ -23,6 +25,14 @@ export async function GET(req: NextRequest, { params }: Params) {
   if (!report) {
     return new Response("Not found", { status: 404 });
   }
+
+  await logAudit({
+    action: AuditAction.LAB_REPORT_VIEW,
+    userId,
+    subject: { type: "LabReport", id: report.id },
+    request: req,
+    ip: getClientIp(req),
+  });
 
   return Response.json(report);
 }
@@ -77,10 +87,19 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     },
   });
 
+  await logAudit({
+    action: AuditAction.LAB_REPORT_UPDATE,
+    userId,
+    subject: { type: "LabReport", id: updated.id },
+    metadata: { status: updated.status },
+    request: req,
+    ip: getClientIp(req),
+  });
+
   return Response.json(updated);
 }
 
-export async function DELETE(_req: NextRequest, { params }: Params) {
+export async function DELETE(req: NextRequest, { params }: Params) {
   const session = await auth();
   if (!session?.user?.id) {
     return new Response("Unauthorized", { status: 401 });
@@ -98,6 +117,14 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   await db.labReport.update({
     where: { id },
     data: { deletedAt: new Date() },
+  });
+
+  await logAudit({
+    action: AuditAction.LAB_REPORT_DELETE,
+    userId,
+    subject: { type: "LabReport", id: existing.id },
+    request: req,
+    ip: getClientIp(req),
   });
 
   return new Response(null, { status: 204 });
