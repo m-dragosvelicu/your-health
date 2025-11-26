@@ -1,4 +1,5 @@
 import {
+  AuditAction,
   BiomarkerCategory,
   MeasurementComparator,
   MeasurementFlag,
@@ -9,6 +10,8 @@ import type { NextRequest } from "next/server";
 
 import { auth } from "@/shared/server/auth";
 import { db } from "@/shared/server/db";
+import { logAudit } from "@/shared/server/audit";
+import { getClientIp } from "@/shared/server/http/ip";
 
 export const runtime = "nodejs";
 
@@ -130,6 +133,15 @@ export async function POST(req: NextRequest) {
       note: typeof note === "string" ? note : undefined,
       source: MeasurementSource.MANUAL,
     },
+  });
+
+  await logAudit({
+    action: AuditAction.MEASUREMENT_CREATE,
+    userId,
+    subject: { type: "Measurement", id: created.id },
+    metadata: { biomarkerId: created.biomarkerId, source: created.source },
+    request: req,
+    ip: getClientIp(req),
   });
 
   return Response.json(created, { status: 201 });

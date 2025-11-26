@@ -1,4 +1,4 @@
-import { LabReportStatus, StorageProvider } from "@prisma/client";
+import { AuditAction, LabReportStatus, StorageProvider } from "@prisma/client";
 import type { NextRequest } from "next/server";
 import { randomUUID } from "crypto";
 import fs from "fs";
@@ -7,6 +7,7 @@ import path from "path";
 import { auth } from "@/shared/server/auth";
 import { db } from "@/shared/server/db";
 import { logAudit } from "@/shared/server/audit";
+import { getClientIp } from "@/shared/server/http/ip";
 
 export const runtime = "nodejs";
 
@@ -80,11 +81,19 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  void logAudit({
+  await logAudit({
     userId,
-    action: "LAB_REPORT_UPLOAD",
+    action: AuditAction.LAB_REPORT_UPLOAD,
     subject: { type: "LabReport", id: labReport.id },
-    metadata: { storageObjectId: storageObject.id },
+    metadata: {
+      storageObjectId: storageObject.id,
+      providerName,
+      title,
+      size: file.size,
+      mimeType: file.type ?? null,
+    },
+    request: req,
+    ip: getClientIp(req),
   });
 
   return Response.json({ labReport, storageObject }, { status: 201 });

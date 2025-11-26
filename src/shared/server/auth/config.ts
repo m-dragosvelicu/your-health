@@ -5,8 +5,10 @@ import GoogleProvider from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { db } from "@/shared/server/db";
 import bcrypt from "bcryptjs";
-import { z } from "zod"
+import { z } from "zod";
 import { rateLimitOrThrow, recordAttempt } from "../security/rate-limit";
+import { logAudit } from "../audit";
+import { AuditAction } from "@prisma/client";
 // Note: we read Google OAuth from process.env to keep typecheck simple
 
 /**
@@ -36,6 +38,10 @@ const CredentialsSchema = z.object({
   password: z.string().min(8).max(100),
 });
 
+const SignOutEventSchema = z.object({
+  token: z.object({ sub: z.string().optional() }).optional(),
+});
+
 export const authConfig = {
   adapter: PrismaAdapter(db),
 
@@ -49,6 +55,33 @@ export const authConfig = {
   //     },
   //   }),
   // },
+
+  events: {
+    signIn: async ({ user, account, isNewUser }) => {
+      await logAudit({
+        action: AuditAction.LOGIN,
+        userId: user.id,
+        metadata: {
+          provider: account?.provider,
+          isNewUser,
+        },
+      });
+    },
+    signOut: async (payload) => {
+      const parsed = SignOutEventSchema.safeParse(payload);
+      const userId = parsed.success ? parsed.data.token?.sub ?? null : null;
+      await logAudit({
+        action: AuditAction.LOGOUT,
+        userId,
+      });
+    },
+    createUser: async ({ user }) => {
+      await logAudit({
+        action: AuditAction.USER_REGISTERED,
+        userId: user.id,
+      });
+    },
+  },
 
   providers: [
     // Discord provider reads AUTH_DISCORD_ID / AUTH_DISCORD_SECRET automatically in v5
@@ -74,17 +107,19 @@ export const authConfig = {
       },
 
       // Runs on the server when you call signIn("credentials", { email, password })
-      authorize: async (raw , req) => {
+      authorize: async (raw, req) => {
         // 1) Validate input shape and normalize email
         const parsed = CredentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
 
         const { email, password } = parsed.data;
 
-        const ip = req?.headers?.get?.("x-forwarded-for")?.split(",")[0]?.trim?.() ?? null;
+        const ip =
+          req?.headers?.get?.("x-forwarded-for")?.split(",")[0]?.trim?.() ??
+          null;
         await rateLimitOrThrow(
-          {action: "login", email, ip},
-          {windowMinutes:15, maxAttempts:20},
+          { action: "login", email, ip },
+          { windowMinutes: 15, maxAttempts: 20 },
         );
 
         // 2) Fetch the credentials row + linked user
@@ -93,14 +128,14 @@ export const authConfig = {
           include: { user: true },
         });
 
-        if (!cred || !cred.user){
-          await recordAttempt({action: "login", email, ip}, false);
+        if (!cred || !cred.user) {
+          await recordAttempt({ action: "login", email, ip }, false);
           return null;
         }
 
         // 3) Verify password hash (salt is embedded in the hash)
         const ok = await bcrypt.compare(password, cred.passwordHash);
-        await recordAttempt({action: "login", email, ip}, ok)
+        await recordAttempt({ action: "login", email, ip }, ok);
         if (!ok) return null;
 
         // 4) Return a minimal user object; NextAuth will persist a session for this user

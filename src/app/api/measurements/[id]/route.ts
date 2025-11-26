@@ -1,4 +1,5 @@
 import {
+  AuditAction,
   MeasurementComparator,
   MeasurementFlag,
   MeasurementSource,
@@ -7,12 +8,14 @@ import type { NextRequest } from "next/server";
 
 import { auth } from "@/shared/server/auth";
 import { db } from "@/shared/server/db";
+import { logAudit } from "@/shared/server/audit";
+import { getClientIp } from "@/shared/server/http/ip";
 
 export const runtime = "nodejs";
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(_req: NextRequest, { params }: Params) {
+export async function GET(req: NextRequest, { params }: Params) {
   const session = await auth();
   if (!session?.user?.id) {
     return new Response("Unauthorized", { status: 401 });
@@ -28,6 +31,14 @@ export async function GET(_req: NextRequest, { params }: Params) {
   if (!measurement) {
     return new Response("Not found", { status: 404 });
   }
+
+  await logAudit({
+    action: AuditAction.MEASUREMENT_VIEW,
+    userId,
+    subject: { type: "Measurement", id: measurement.id },
+    request: req,
+    ip: getClientIp(req),
+  });
 
   return Response.json(measurement);
 }
@@ -97,10 +108,19 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     },
   });
 
+  await logAudit({
+    action: AuditAction.MEASUREMENT_UPDATE,
+    userId,
+    subject: { type: "Measurement", id: updated.id },
+    metadata: { flag: updated.flag, comparator: updated.comparator },
+    request: req,
+    ip: getClientIp(req),
+  });
+
   return Response.json(updated);
 }
 
-export async function DELETE(_req: NextRequest, { params }: Params) {
+export async function DELETE(req: NextRequest, { params }: Params) {
   const session = await auth();
   if (!session?.user?.id) {
     return new Response("Unauthorized", { status: 401 });
@@ -118,6 +138,14 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   await db.measurement.update({
     where: { id },
     data: { deletedAt: new Date() },
+  });
+
+  await logAudit({
+    action: AuditAction.MEASUREMENT_DELETE,
+    userId,
+    subject: { type: "Measurement", id: existing.id },
+    request: req,
+    ip: getClientIp(req),
   });
 
   return new Response(null, { status: 204 });
