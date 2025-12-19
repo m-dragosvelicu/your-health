@@ -1,5 +1,6 @@
 import { authRouter } from "@/features/auth";
 import { labRouter } from "@/features/labs";
+import { medicationRouter } from "@/features/medications";
 import { postRouter } from "@/features/posts";
 import { createCallerFactory, createTRPCRouter } from "@/shared/server/api/trpc";
 /**
@@ -10,6 +11,7 @@ import { createCallerFactory, createTRPCRouter } from "@/shared/server/api/trpc"
 export const appRouter = createTRPCRouter({
   auth: authRouter,
   lab: labRouter,
+  medication: medicationRouter,
   post: postRouter,
 });
 

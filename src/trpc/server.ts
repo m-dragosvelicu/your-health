@@ -28,3 +28,6 @@ export const { trpc: api, HydrateClient } = createHydrationHelpers<AppRouter>(
   caller,
   getQueryClient,
 );
+
+// Direct server-side caller for use in React Server Components.
+export const rscCaller = caller;
