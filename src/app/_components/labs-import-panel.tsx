@@ -25,6 +25,12 @@ type LabTest = {
   refRaw: string;
 };
 
+type EditedTest = LabTest & {
+  originalValue: number | null;
+  originalRawValue: string;
+  isEdited: boolean;
+};
+
 type UploadedLab = {
   patient: LabPatient;
   meta: LabMeta;
@@ -46,16 +52,52 @@ export default function LabsImportPanel() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<UploadedLab | null>(null);
+  const [editedTests, setEditedTests] = useState<EditedTest[]>([]);
   const [labId, setLabId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // Initialize editable tests from preview
+  const initializeEditableTests = (tests: LabTest[]): EditedTest[] => {
+    return tests.map((test) => ({
+      ...test,
+      originalValue: test.value,
+      originalRawValue: test.rawValue,
+      isEdited: false,
+    }));
+  };
+
+  // Handle editing a test value
+  const handleTestValueChange = (index: number, newRawValue: string) => {
+    setEditedTests((prev) => {
+      const updated = [...prev];
+      const test = updated[index];
+      if (!test) return prev;
+
+      // Try to parse as number
+      const parsedValue = parseFloat(newRawValue);
+      const numericValue = isNaN(parsedValue) ? null : parsedValue;
+
+      updated[index] = {
+        ...test,
+        rawValue: newRawValue,
+        value: numericValue,
+        isEdited: newRawValue !== test.originalRawValue,
+      };
+      return updated;
+    });
+  };
+
+  // Count edited tests
+  const editedCount = editedTests.filter((t) => t.isEdited).length;
+
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
     setSelectedFile(file);
     setPreview(null);
+    setEditedTests([]);
     setLabId(null);
     setError(null);
   };
@@ -65,7 +107,7 @@ export default function LabsImportPanel() {
   };
 
   const handleConfirm = async () => {
-    if (!preview) {
+    if (!preview || editedTests.length === 0) {
       setError("No preview data to confirm.");
       return;
     }
@@ -74,6 +116,17 @@ export default function LabsImportPanel() {
     setError(null);
 
     try {
+      // Prepare tests with isEdited flag
+      const testsToSave = editedTests.map((test) => ({
+        section: test.section,
+        name: test.name,
+        value: test.value,
+        rawValue: test.rawValue,
+        unit: test.unit,
+        refRaw: test.refRaw,
+        isEdited: test.isEdited,
+      }));
+
       const response = await fetch("/api/labs/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -90,7 +143,7 @@ export default function LabsImportPanel() {
             resultDate: preview.meta.result_date,
             rawFilePath: preview.meta.raw_file_path,
           },
-          tests: preview.tests,
+          tests: testsToSave,
         }),
       });
 
@@ -146,6 +199,7 @@ export default function LabsImportPanel() {
       }
 
       setPreview(data.preview);
+      setEditedTests(initializeEditableTests(data.preview.tests));
       setSuccess(false);
     } catch (err) {
       console.error("[LabsImportPanel] Failed to preview labs", err);
@@ -157,13 +211,14 @@ export default function LabsImportPanel() {
     }
   };
 
-  const groupedBySection: Record<string, LabTest[]> | null =
-    preview?.tests?.length
-      ? preview.tests.reduce<Record<string, LabTest[]>>((acc, test) => {
+  // Group edited tests by section, preserving original index for editing
+  const groupedBySection: Record<string, { test: EditedTest; index: number }[]> | null =
+    editedTests.length > 0
+      ? editedTests.reduce<Record<string, { test: EditedTest; index: number }[]>>((acc, test, index) => {
           if (!acc[test.section]) {
             acc[test.section] = [];
           }
-          acc[test.section]!.push(test);
+          acc[test.section]!.push({ test, index });
           return acc;
         }, {})
       : null;
@@ -341,13 +396,25 @@ export default function LabsImportPanel() {
 
             {groupedBySection && (
               <div className="space-y-4">
-                {Object.entries(groupedBySection).map(([section, tests]) => (
+                {/* Edit indicator banner */}
+                {editedCount > 0 && (
+                  <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span>
+                      <strong>{editedCount}</strong> value{editedCount !== 1 ? "s" : ""} edited
+                    </span>
+                  </div>
+                )}
+
+                {Object.entries(groupedBySection).map(([section, items]) => (
                   <div key={section} className="rounded-lg border bg-background p-4">
                     <div className="mb-2 flex items-center justify-between">
                       <p className="text-sm font-semibold">{section}</p>
                       <p className="text-xs text-muted-foreground">
-                        {tests.length}{" "}
-                        {tests.length === 1 ? "measurement will be imported" : "measurements will be imported"}
+                        {items.length}{" "}
+                        {items.length === 1 ? "measurement will be imported" : "measurements will be imported"}
                       </p>
                     </div>
                     <div className="overflow-x-auto">
@@ -361,22 +428,31 @@ export default function LabsImportPanel() {
                           </tr>
                         </thead>
                         <tbody className="divide-y">
-                          {tests.map((test) => (
-                            <tr key={`${section}-${test.name}-${test.rawValue}`}>
+                          {items.map(({ test, index }) => (
+                            <tr key={`${section}-${test.name}-${index}`} className={test.isEdited ? "bg-amber-50" : ""}>
                               <td className="py-2 pr-4">
                                 <div className="text-xs font-medium text-foreground">
                                   {test.name}
                                 </div>
                               </td>
                               <td className="py-2 pr-4 align-top">
-                                <div className="text-xs font-medium text-foreground">
-                                  {test.value ?? "—"}
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="text"
+                                    value={test.rawValue}
+                                    onChange={(e) => handleTestValueChange(index, e.target.value)}
+                                    className={`w-24 rounded border px-2 py-1 text-xs font-medium ${
+                                      test.isEdited
+                                        ? "border-amber-400 bg-amber-50 text-amber-900"
+                                        : "border-border bg-background text-foreground"
+                                    }`}
+                                  />
+                                  {test.isEdited && (
+                                    <span className="text-[0.65rem] text-amber-600" title={`Original: ${test.originalRawValue}`}>
+                                      (was {test.originalRawValue})
+                                    </span>
+                                  )}
                                 </div>
-                                {test.value === null && (
-                                  <div className="text-[0.7rem] text-muted-foreground">
-                                    Raw: {test.rawValue}
-                                  </div>
-                                )}
                               </td>
                               <td className="py-2 pr-4 align-top text-xs text-muted-foreground">
                                 {test.unit}
@@ -405,7 +481,10 @@ export default function LabsImportPanel() {
                   {isConfirming ? "Saving..." : "✓ Confirm & Save to Dashboard"}
                 </button>
                 <p className="mt-2 text-center text-xs text-muted-foreground">
-                  This will save {preview.tests.length} test results to your dashboard
+                  This will save {editedTests.length} test results to your dashboard
+                  {editedCount > 0 && (
+                    <span className="text-amber-600"> ({editedCount} edited)</span>
+                  )}
                 </p>
               </div>
             )}
@@ -426,6 +505,7 @@ export default function LabsImportPanel() {
                   onClick={() => {
                     setSelectedFile(null);
                     setPreview(null);
+                    setEditedTests([]);
                     setLabId(null);
                     setSuccess(false);
                   }}
