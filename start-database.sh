@@ -118,5 +118,6 @@ $DOCKER_CMD run -d \
   -e POSTGRES_PASSWORD="$DB_PASSWORD" \
   -e POSTGRES_DB="$DB_NAME" \
   -p "${DB_PORT}:5432" \
+  -v "health_tracker_webapp-postgres-data:/var/lib/postgresql/data" \
   docker.io/postgres:16 \
   && echo "Database container '$DB_CONTAINER_NAME' was successfully created"

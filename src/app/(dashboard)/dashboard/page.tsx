@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LabValuesChart from "@/app/_components/lab-values-chart";
 
 export default function DashboardPage() {
   return (
@@ -11,6 +12,9 @@ export default function DashboardPage() {
           </p>
         </div>
       </div>
+
+      {/* Lab Values Chart */}
+      <LabValuesChart />
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
