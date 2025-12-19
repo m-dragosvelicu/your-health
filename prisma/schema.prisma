@@ -66,6 +66,9 @@ model LabTest {
   unit  String?
   refRaw String?
 
+  // Track if user edited this value before saving
+  isEdited Boolean @default(false)
+
   createdAt DateTime @default(now())
 
   @@index([labId])

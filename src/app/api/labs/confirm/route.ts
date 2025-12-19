@@ -26,6 +26,7 @@ const ConfirmLabSchema = z.object({
       rawValue: z.string(),
       unit: z.string().nullable(),
       refRaw: z.string().nullable(),
+      isEdited: z.boolean().optional().default(false),
     })
   ),
 });
@@ -59,6 +60,7 @@ export async function POST(req: Request) {
         rawValue: test.rawValue,
         unit: test.unit,
         refRaw: test.refRaw,
+        isEdited: test.isEdited,
       })),
       rejectedLines: [],
     };

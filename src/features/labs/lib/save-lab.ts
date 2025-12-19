@@ -34,6 +34,7 @@ export async function saveParsedLab({
           rawValue: test.rawValue,
           unit: test.unit,
           refRaw: test.refRaw,
+          isEdited: "isEdited" in test ? Boolean(test.isEdited) : false,
         })),
       },
     },
