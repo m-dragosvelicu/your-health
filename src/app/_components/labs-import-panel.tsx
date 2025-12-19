@@ -34,8 +34,12 @@ type UploadedLab = {
 
 type UploadResponse = {
   ok: boolean;
+  preview: UploadedLab;
+};
+
+type ConfirmResponse = {
+  ok: boolean;
   labId: string;
-  lab: UploadedLab;
 };
 
 export default function LabsImportPanel() {
@@ -44,7 +48,9 @@ export default function LabsImportPanel() {
   const [preview, setPreview] = useState<UploadedLab | null>(null);
   const [labId, setLabId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
@@ -56,6 +62,56 @@ export default function LabsImportPanel() {
 
   const handlePickFile = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleConfirm = async () => {
+    if (!preview) {
+      setError("No preview data to confirm.");
+      return;
+    }
+
+    setIsConfirming(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/labs/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          patient: {
+            lastName: preview.patient.last_name,
+            firstName: preview.patient.first_name,
+            birthdate: preview.patient.birthdate,
+          },
+          meta: {
+            provider: preview.meta.provider,
+            samplingDate: preview.meta.sampling_date,
+            resultDate: preview.meta.result_date,
+            rawFilePath: preview.meta.raw_file_path,
+          },
+          tests: preview.tests,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Confirm failed with status ${response.status}`);
+      }
+
+      const data = (await response.json()) as ConfirmResponse;
+
+      if (!data.ok) {
+        throw new Error("Confirm response did not indicate success");
+      }
+
+      setLabId(data.labId);
+      setSuccess(true);
+    } catch (err) {
+      console.error("[LabsImportPanel] Failed to confirm labs", err);
+      setError("Failed to save lab results. Please try again.");
+    } finally {
+      setIsConfirming(false);
+    }
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -89,8 +145,8 @@ export default function LabsImportPanel() {
         throw new Error("Upload response did not indicate success");
       }
 
-      setPreview(data.lab);
-      setLabId(data.labId);
+      setPreview(data.preview);
+      setSuccess(false);
     } catch (err) {
       console.error("[LabsImportPanel] Failed to preview labs", err);
       setError(
@@ -335,6 +391,48 @@ export default function LabsImportPanel() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Confirm & Save Button */}
+            {!success && (
+              <div className="mt-6 rounded-lg border bg-muted/10 p-4">
+                <button
+                  onClick={handleConfirm}
+                  disabled={isConfirming}
+                  className="w-full rounded-md bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+                >
+                  {isConfirming ? "Saving..." : "✓ Confirm & Save to Dashboard"}
+                </button>
+                <p className="mt-2 text-center text-xs text-muted-foreground">
+                  This will save {preview.tests.length} test results to your dashboard
+                </p>
+              </div>
+            )}
+
+            {/* Success Message */}
+            {success && labId && (
+              <div className="mt-6 rounded-lg border border-green-600 bg-green-50 p-4">
+                <div className="flex items-center gap-2 text-green-800">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="font-semibold">Lab results saved successfully!</p>
+                </div>
+                <p className="mt-2 text-sm text-green-700">
+                  Lab ID: <code className="rounded bg-green-100 px-1 py-0.5 font-mono text-xs">{labId}</code>
+                </p>
+                <button
+                  onClick={() => {
+                    setSelectedFile(null);
+                    setPreview(null);
+                    setLabId(null);
+                    setSuccess(false);
+                  }}
+                  className="mt-3 text-sm text-green-700 underline hover:no-underline"
+                >
+                  Import another report
+                </button>
               </div>
             )}
           </div>

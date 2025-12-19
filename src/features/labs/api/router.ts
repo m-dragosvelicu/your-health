@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 
 import {
   createTRPCRouter,
@@ -103,5 +104,37 @@ export const labRouter = createTRPCRouter({
         })),
       };
     }),
-});
 
+  /**
+   * Delete a lab (and its tests) owned by the current user.
+   */
+  delete: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { db, session } = ctx;
+
+      const existing = await db.lab.findFirst({
+        where: {
+          id: input.id,
+          userId: session.user.id,
+        },
+      });
+
+      if (!existing) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Lab not found",
+        });
+      }
+
+      await db.lab.delete({
+        where: { id: input.id },
+      });
+
+      return { ok: true };
+    }),
+});
