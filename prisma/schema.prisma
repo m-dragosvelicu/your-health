@@ -107,9 +107,10 @@ model MedicationLog {
   medication   Medication          @relation(fields: [medicationId], references: [id], onDelete: Cascade)
   medicationId String
 
-  scheduledAt DateTime
-  takenAt     DateTime?
-  status      MedicationLogStatus
+  scheduledAt  DateTime
+  takenAt      DateTime?
+  status       MedicationLogStatus
+  snoozedUntil DateTime?           // When snooze expires, null if not snoozed
 
   createdAt DateTime @default(now())
 

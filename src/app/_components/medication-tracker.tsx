@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 
 import { api } from "~/trpc/trpc-provider";
@@ -105,6 +105,20 @@ export function MedicationTracker() {
       await utils.medication.getTodaySchedule.invalidate();
     },
   });
+
+  const snoozeMutation = api.medication.snooze.useMutation({
+    onSuccess: async () => {
+      await utils.medication.getTodaySchedule.invalidate();
+    },
+  });
+
+  // Auto-refresh schedule every 60 seconds to update snooze expirations
+  useEffect(() => {
+    const interval = setInterval(() => {
+      void utils.medication.getTodaySchedule.invalidate();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [utils.medication.getTodaySchedule]);
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
@@ -223,6 +237,19 @@ export function MedicationTracker() {
     });
   }
 
+  function handleSnooze(
+    medicationId: string,
+    time: string,
+    minutes: number,
+  ) {
+    snoozeMutation.mutate({
+      medicationId,
+      time,
+      date: new Date(),
+      minutes,
+    });
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
       {/* Daily schedule */}
@@ -269,6 +296,7 @@ export function MedicationTracker() {
               {sortedSchedule.map((item) => {
                 const isTaken = item.status === "taken";
                 const isSkipped = item.status === "skipped";
+                const isSnoozed = item.status === "snoozed";
                 const isPending = item.status === "pending";
 
                 return (
@@ -284,7 +312,9 @@ export function MedicationTracker() {
                             ? "border-green-600 bg-green-50 text-green-700"
                             : isSkipped
                               ? "border-destructive bg-destructive/10 text-destructive"
-                              : "border-muted-foreground/50 text-muted-foreground",
+                              : isSnoozed
+                                ? "border-amber-500 bg-amber-50 text-amber-700"
+                                : "border-muted-foreground/50 text-muted-foreground",
                         ].join(" ")}
                       >
                         {item.time}
@@ -302,18 +332,21 @@ export function MedicationTracker() {
                               ? `Taken at ${format(item.takenAt, "HH:mm")}`
                               : "Taken")}
                           {isSkipped && "Skipped"}
+                          {isSnoozed &&
+                            item.snoozedUntil &&
+                            `Snoozed until ${format(item.snoozedUntil, "HH:mm")}`}
                           {isPending &&
                             `Scheduled for ${item.time}`}
                         </p>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       {isPending && (
                         <>
                           <Button
                             size="sm"
                             variant="default"
-                            disabled={logTakenMutation.isPending || logSkippedMutation.isPending}
+                            disabled={logTakenMutation.isPending || logSkippedMutation.isPending || snoozeMutation.isPending}
                             onClick={() =>
                               handleLogTaken(
                                 item.medicationId,
@@ -326,7 +359,59 @@ export function MedicationTracker() {
                           <Button
                             size="sm"
                             variant="outline"
-                            disabled={logTakenMutation.isPending || logSkippedMutation.isPending}
+                            disabled={logTakenMutation.isPending || logSkippedMutation.isPending || snoozeMutation.isPending}
+                            onClick={() =>
+                              handleLogSkipped(
+                                item.medicationId,
+                                item.time,
+                              )
+                            }
+                          >
+                            Skip
+                          </Button>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-muted-foreground">Snooze:</span>
+                            {[10, 30, 60].map((mins) => (
+                              <Button
+                                key={mins}
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs"
+                                disabled={snoozeMutation.isPending || logTakenMutation.isPending}
+                                onClick={() =>
+                                  handleSnooze(
+                                    item.medicationId,
+                                    item.time,
+                                    mins,
+                                  )
+                                }
+                              >
+                                {mins}m
+                              </Button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      {isSnoozed && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="default"
+                            disabled={logTakenMutation.isPending}
+                            onClick={() =>
+                              handleLogTaken(
+                                item.medicationId,
+                                item.time,
+                              )
+                            }
+                          >
+                            Take now
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-amber-500 text-amber-700"
+                            disabled={logSkippedMutation.isPending}
                             onClick={() =>
                               handleLogSkipped(
                                 item.medicationId,

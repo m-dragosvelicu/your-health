@@ -22,8 +22,9 @@ export type MedicationScheduleItem = {
   time: string;
   scheduledAt: Date;
   logId?: string;
-  status: "pending" | "taken" | "skipped";
+  status: "pending" | "taken" | "skipped" | "snoozed";
   takenAt?: Date | null;
+  snoozedUntil?: Date | null;
 };
 
 export async function listMedications(userId: string) {
@@ -118,7 +119,18 @@ function buildScheduledDate(date: Date, time: string) {
   return scheduled;
 }
 
-function mapStatus(status: MedicationLogStatus): "taken" | "skipped" {
+function mapStatus(
+  status: MedicationLogStatus,
+  snoozedUntil: Date | null,
+): "taken" | "skipped" | "snoozed" | "pending" {
+  // If snoozed and snooze hasn't expired yet
+  if (snoozedUntil && snoozedUntil > new Date()) {
+    return "snoozed";
+  }
+  // If snooze expired, treat as pending again
+  if (snoozedUntil && snoozedUntil <= new Date() && status !== "TAKEN") {
+    return "pending";
+  }
   if (status === "TAKEN") return "taken";
   return "skipped";
 }
@@ -225,6 +237,60 @@ export async function logMedicationSkipped(
   });
 }
 
+export async function snoozeMedication(
+  userId: string,
+  medicationId: string,
+  date: Date,
+  time: string,
+  minutes: number,
+) {
+  const medication = await db.medication.findFirst({
+    where: {
+      id: medicationId,
+      userId,
+      isActive: true,
+    },
+  });
+
+  if (!medication) {
+    return null;
+  }
+
+  const scheduledAt = buildScheduledDate(date, time);
+  const snoozedUntil = new Date();
+  snoozedUntil.setMinutes(snoozedUntil.getMinutes() + minutes);
+
+  const existing = await db.medicationLog.findFirst({
+    where: {
+      medicationId,
+      scheduledAt,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  if (existing) {
+    return db.medicationLog.update({
+      where: { id: existing.id },
+      data: {
+        snoozedUntil,
+        // Don't change status - keep it as is until taken or skipped
+      },
+    });
+  }
+
+  return db.medicationLog.create({
+    data: {
+      medicationId,
+      scheduledAt,
+      takenAt: null,
+      status: "SKIPPED", // Temporary status, will show as snoozed due to snoozedUntil
+      snoozedUntil,
+    },
+  });
+}
+
 export async function getTodaySchedule(
   userId: string,
   date: Date,
@@ -292,8 +358,9 @@ export async function getTodaySchedule(
         time,
         scheduledAt,
         logId: log.id,
-        status: mapStatus(log.status),
+        status: mapStatus(log.status, log.snoozedUntil),
         takenAt: log.takenAt,
+        snoozedUntil: log.snoozedUntil,
       });
     }
   }

@@ -10,6 +10,7 @@ import {
   listMedications,
   logMedicationTaken,
   logMedicationSkipped,
+  snoozeMedication,
   softDeleteMedication,
   updateMedication,
 } from "../lib/medication-crud";
@@ -117,6 +118,29 @@ export const medicationRouter = createTRPCRouter({
       );
 
       return logged;
+    }),
+
+  snooze: protectedProcedure
+    .input(
+      z.object({
+        medicationId: z.string().min(1),
+        time: timeStringSchema,
+        date: z.date().optional(),
+        minutes: z.number().min(1).max(120),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { session } = ctx;
+
+      const snoozed = await snoozeMedication(
+        session.user.id,
+        input.medicationId,
+        input.date ?? new Date(),
+        input.time,
+        input.minutes,
+      );
+
+      return snoozed;
     }),
 
   getTodaySchedule: protectedProcedure
