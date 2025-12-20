@@ -1,7 +1,22 @@
 {
-  "name": "health_tracker_webapp",
-  "version": "0.1.0",
-  "private": true,
+  "name": "your-health",
+  "version": "1.0.0",
+  "description": "A modern health tracking application for managing medications and lab results with AI-powered PDF parsing",
+  "author": "Health Tracker Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/m-dragosvelicu/your-health.git"
+  },
+  "keywords": [
+    "health",
+    "medications",
+    "lab-results",
+    "nextjs",
+    "react",
+    "typescript",
+    "trpc"
+  ],
   "type": "module",
   "scripts": {
     "build": "next build",
@@ -70,9 +85,6 @@
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.27.0",
     "vitest": "^2.1.4"
-  },
-  "ct3aMetadata": {
-    "initVersion": "7.39.3"
   },
   "packageManager": "npm@11.6.2"
 }
