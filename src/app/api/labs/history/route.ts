@@ -5,9 +5,11 @@ import { db } from "@/shared/server/db";
 export const runtime = "nodejs";
 
 /**
- * GET /api/labs/history?testName=TSH
+ * GET /api/labs/history?testName=TSH&days=90
  *
- * Returns time-series data for a specific lab test across all lab sessions
+ * Returns time-series data for a specific lab test across all lab sessions.
+ * Optional `days` param filters to results within that many days (e.g., 90, 180, 365).
+ * Use days=0 or omit for all data.
  */
 export async function GET(req: Request) {
   const session = await auth();
@@ -17,12 +19,22 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const testName = searchParams.get("testName");
+  const daysParam = searchParams.get("days");
+  const days = daysParam ? parseInt(daysParam, 10) : 0;
 
   if (!testName) {
     return NextResponse.json(
       { ok: false, error: "Missing testName parameter" },
       { status: 400 }
     );
+  }
+
+  // Calculate cutoff date if days filter is specified
+  let dateFilter: { gte: Date } | undefined = undefined;
+  if (days > 0) {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    dateFilter = { gte: cutoffDate };
   }
 
   try {
@@ -32,6 +44,7 @@ export async function GET(req: Request) {
         name: testName,
         lab: {
           userId: session.user.id,
+          ...(dateFilter && { sampledAt: dateFilter }),
         },
       },
       include: {

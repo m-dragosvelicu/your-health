@@ -31,10 +31,21 @@ type DataPoint = {
   changeDirection: "up" | "down" | "same" | null;
 };
 
+type TimeFilter = "last" | "3m" | "6m" | "12m" | "all";
+
+const TIME_FILTER_OPTIONS: { value: TimeFilter; label: string; days: number }[] = [
+  { value: "last", label: "Last", days: 1 },
+  { value: "3m", label: "3M", days: 90 },
+  { value: "6m", label: "6M", days: 180 },
+  { value: "12m", label: "12M", days: 365 },
+  { value: "all", label: "All", days: 0 },
+];
+
 export default function LabValuesChart() {
   const [availableTests, setAvailableTests] = useState<TestOption[]>([]);
   const [selectedTest, setSelectedTest] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [data, setData] = useState<DataPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +70,7 @@ export default function LabValuesChart() {
     fetchTests();
   }, []);
 
-  // Fetch history when selected test changes
+  // Fetch history when selected test or time filter changes
   useEffect(() => {
     if (!selectedTest) return;
 
@@ -67,12 +78,17 @@ export default function LabValuesChart() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(
-          `/api/labs/history?testName=${encodeURIComponent(selectedTest)}`,
-        );
+        const filterDays = TIME_FILTER_OPTIONS.find((f) => f.value === timeFilter)?.days ?? 0;
+        const url = `/api/labs/history?testName=${encodeURIComponent(selectedTest)}${filterDays > 0 ? `&days=${filterDays}` : ""}`;
+        const res = await fetch(url);
         const json = await res.json();
         if (json.ok) {
-          setData(json.data);
+          // For "last" filter, only show the most recent result
+          if (timeFilter === "last" && json.data.length > 0) {
+            setData([json.data[json.data.length - 1]]);
+          } else {
+            setData(json.data);
+          }
         } else {
           setError(json.error || "Failed to load data");
         }
@@ -84,7 +100,7 @@ export default function LabValuesChart() {
       }
     }
     fetchHistory();
-  }, [selectedTest]);
+  }, [selectedTest, timeFilter]);
 
   const filteredTests = availableTests.filter((test) =>
     test.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -179,6 +195,24 @@ export default function LabValuesChart() {
             available
           </p>
         </div>
+      </div>
+
+      {/* Time Period Filter */}
+      <div className="mb-4 flex items-center gap-1">
+        <span className="text-muted-foreground mr-2 text-xs">Time period:</span>
+        {TIME_FILTER_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            onClick={() => setTimeFilter(option.value)}
+            className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+              timeFilter === option.value
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
       </div>
 
       {/* Chart Area */}
