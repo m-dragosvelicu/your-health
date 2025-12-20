@@ -1,6 +1,5 @@
 import "server-only";
 
-import type { PdfDocumentProxy } from "pdf-parse";
 import type pdfParseModule from "pdf-parse";
 
 export type ParsedLabPatient = {
@@ -34,7 +33,7 @@ export type ParsedLab = {
 type PdfParseResult = {
   text: string;
   numpages: number;
-  info?: PdfDocumentProxy["info"];
+  info?: Record<string, unknown>;
 };
 
 async function loadPdfParse(): Promise<(data: Buffer) => Promise<PdfParseResult>> {
@@ -91,17 +90,17 @@ function extractHeader(lines: string[]): {
     }
     if (!birthdate) {
       const m = /Birthdate:\s*([0-9./-]+)/i.exec(line);
-      if (m) birthdate = parseSynevoDate(m[1]);
+      if (m?.[1]) birthdate = parseSynevoDate(m[1]);
     }
     if (!sampledAt) {
       const m = /Sampling date:\s*([0-9./-]+\s+[0-9:]+)/i.exec(line);
-      if (m) sampledAt = parseSynevoDateTime(m[1]);
+      if (m?.[1]) sampledAt = parseSynevoDateTime(m[1]);
     }
     if (!resultAt) {
       const m =
         /Result date:\s*([0-9./-]+(?:\s+[0-9:]+)?)/i.exec(line) ??
         /Result date:\s*([0-9./-]+)/i.exec(line);
-      if (m) resultAt = parseSynevoDateTime(m[1]);
+      if (m?.[1]) resultAt = parseSynevoDateTime(m[1]);
     }
   }
 
@@ -175,7 +174,7 @@ function parseTestRow(line: string, section: string): ParsedLabTest | null {
   const cleaned = line.replace(/\s+/g, " ").trim();
 
   const valueMatch = cleaned.match(/([<>]=?\s*)?(\d+(?:[.,]\d+)?)/);
-  if (!valueMatch || valueMatch.index === undefined) {
+  if (!valueMatch || valueMatch.index === undefined || !valueMatch[2]) {
     return null;
   }
 
@@ -259,11 +258,10 @@ function isLikelyUnit(token: string): boolean {
 function parseSynevoDate(value: string): Date | null {
   const trimmed = value.trim();
   const m = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/.exec(trimmed);
-  if (!m) return null;
-  const [, dd, mm, yyyy] = m;
-  const day = Number.parseInt(dd, 10);
-  const month = Number.parseInt(mm, 10);
-  const year = Number.parseInt(yyyy, 10);
+  if (!m?.[1] || !m[2] || !m[3]) return null;
+  const day = Number.parseInt(m[1], 10);
+  const month = Number.parseInt(m[2], 10);
+  const year = Number.parseInt(m[3], 10);
 
   if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) {
     return null;
@@ -277,14 +275,13 @@ function parseSynevoDateTime(value: string): Date | null {
   const trimmed = value.trim();
   const m =
     /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/.exec(trimmed);
-  if (!m) return parseSynevoDate(trimmed);
+  if (!m?.[1] || !m[2] || !m[3]) return parseSynevoDate(trimmed);
 
-  const [, dd, mm, yyyy, hh, min] = m;
-  const day = Number.parseInt(dd, 10);
-  const month = Number.parseInt(mm, 10);
-  const year = Number.parseInt(yyyy, 10);
-  const hours = hh ? Number.parseInt(hh, 10) : 0;
-  const minutes = min ? Number.parseInt(min, 10) : 0;
+  const day = Number.parseInt(m[1], 10);
+  const month = Number.parseInt(m[2], 10);
+  const year = Number.parseInt(m[3], 10);
+  const hours = m[4] ? Number.parseInt(m[4], 10) : 0;
+  const minutes = m[5] ? Number.parseInt(m[5], 10) : 0;
 
   if (
     !Number.isFinite(day) ||

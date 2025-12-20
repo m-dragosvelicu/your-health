@@ -121,7 +121,7 @@ Return ONLY the JSON object, no markdown formatting or extra text.`;
     const jsonMatch = text.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/) ||
                       text.match(/(\{[\s\S]*\})/);
 
-    if (!jsonMatch) {
+    if (!jsonMatch?.[1]) {
       throw new Error("Failed to extract JSON from Gemini response");
     }
 

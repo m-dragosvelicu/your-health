@@ -118,12 +118,12 @@ export default function LabValuesChart() {
     const ltMatch = referenceInfo.match(/[<≤]\s*([\d.]+)/);
     const gtMatch = referenceInfo.match(/[>≥]\s*([\d.]+)/);
 
-    if (rangeMatch) {
+    if (rangeMatch?.[1] && rangeMatch[2]) {
       refLow = parseFloat(rangeMatch[1]);
       refHigh = parseFloat(rangeMatch[2]);
-    } else if (ltMatch) {
+    } else if (ltMatch?.[1]) {
       refHigh = parseFloat(ltMatch[1]);
-    } else if (gtMatch) {
+    } else if (gtMatch?.[1]) {
       refLow = parseFloat(gtMatch[1]);
     }
   }

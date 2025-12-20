@@ -12,14 +12,15 @@ const ParamsSchema = z.object({
 
 export async function GET(
   _req: Request,
-  { params }: { params: unknown },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const parsed = ParamsSchema.safeParse(params);
+  const resolvedParams = await params;
+  const parsed = ParamsSchema.safeParse(resolvedParams);
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, error: "Invalid lab id", issues: parsed.error.flatten() },

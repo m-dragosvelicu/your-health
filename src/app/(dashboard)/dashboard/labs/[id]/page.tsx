@@ -4,13 +4,14 @@ import { notFound } from "next/navigation";
 import { rscCaller } from "~/trpc/server";
 
 type LabsDetailPageProps = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
 export default async function LabDetailPage({ params }: LabsDetailPageProps) {
-  const lab = await rscCaller.lab.byId({ id: params.id });
+  const { id } = await params;
+  const lab = await rscCaller.lab.byId({ id });
 
   if (!lab) {
     notFound();
