@@ -81,11 +81,36 @@ export async function GET(req: Request) {
       return true;
     });
 
+    // Add change indicators comparing to previous value
+    const withChanges = deduped.map((point, index) => {
+      const previousValue = index > 0 ? deduped[index - 1]?.value ?? null : null;
+      let changePercent: number | null = null;
+      let changeDirection: "up" | "down" | "same" | null = null;
+
+      if (point.value !== null && previousValue !== null && previousValue !== 0) {
+        changePercent = ((point.value - previousValue) / Math.abs(previousValue)) * 100;
+        if (Math.abs(changePercent) < 0.5) {
+          changeDirection = "same";
+        } else if (changePercent > 0) {
+          changeDirection = "up";
+        } else {
+          changeDirection = "down";
+        }
+      }
+
+      return {
+        ...point,
+        previousValue,
+        changePercent: changePercent !== null ? Math.round(changePercent * 10) / 10 : null,
+        changeDirection,
+      };
+    });
+
     return NextResponse.json({
       ok: true,
       testName,
-      data: deduped,
-      count: deduped.length,
+      data: withChanges,
+      count: withChanges.length,
     });
   } catch (err) {
     console.error("[labs-history] Failed to fetch test history", err);

@@ -26,6 +26,9 @@ type DataPoint = {
   unit: string | null;
   referenceRange: string | null;
   provider: string;
+  previousValue: number | null;
+  changePercent: number | null;
+  changeDirection: "up" | "down" | "same" | null;
 };
 
 export default function LabValuesChart() {
@@ -296,13 +299,36 @@ export default function LabValuesChart() {
                       data.value !== null &&
                       data.value < refLow;
 
+                    // Format change indicator
+                    const changeIcon =
+                      data.changeDirection === "up"
+                        ? "↑"
+                        : data.changeDirection === "down"
+                          ? "↓"
+                          : data.changeDirection === "same"
+                            ? "="
+                            : null;
+                    const changeColor =
+                      data.changeDirection === "up"
+                        ? "text-red-600"
+                        : data.changeDirection === "down"
+                          ? "text-green-600"
+                          : "text-gray-500";
+
                     return (
                       <div className="bg-card rounded-lg border p-3 shadow-lg">
-                        <p
-                          className={`text-base font-bold ${isHigh ? "text-red-600" : isLow ? "text-yellow-600" : "text-green-600"}`}
-                        >
-                          {data.rawValue} {data.unit}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p
+                            className={`text-base font-bold ${isHigh ? "text-red-600" : isLow ? "text-yellow-600" : "text-green-600"}`}
+                          >
+                            {data.rawValue} {data.unit}
+                          </p>
+                          {changeIcon && data.changePercent !== null && (
+                            <span className={`text-sm font-semibold ${changeColor}`}>
+                              {changeIcon} {Math.abs(data.changePercent)}%
+                            </span>
+                          )}
+                        </div>
                         <p className="text-muted-foreground text-xs">
                           {new Date(data.date).toLocaleDateString("en-US", {
                             year: "numeric",
@@ -310,6 +336,11 @@ export default function LabValuesChart() {
                             day: "numeric",
                           })}
                         </p>
+                        {data.previousValue !== null && (
+                          <p className="text-muted-foreground mt-1 text-xs">
+                            Previous: {data.previousValue} {data.unit}
+                          </p>
+                        )}
                         {data.referenceRange && (
                           <p className="text-muted-foreground mt-1 text-xs">
                             Reference: {data.referenceRange}
@@ -368,12 +399,28 @@ export default function LabValuesChart() {
           </ResponsiveContainer>
 
           {/* Data Summary */}
-          <div className="bg-muted/20 mt-4 grid grid-cols-3 gap-4 rounded-lg border p-4 text-sm">
+          <div className="bg-muted/20 mt-4 grid grid-cols-4 gap-4 rounded-lg border p-4 text-sm">
             <div>
               <p className="text-muted-foreground text-xs">Latest Value</p>
               <p className="font-semibold">
-                {data[data.length - 1].rawValue} {unit}
+                {data[data.length - 1]?.rawValue} {unit}
               </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-xs">Change</p>
+              {(() => {
+                const latest = data[data.length - 1];
+                if (!latest?.changeDirection || latest.changePercent === null) {
+                  return <p className="text-muted-foreground font-medium">—</p>;
+                }
+                const icon = latest.changeDirection === "up" ? "↑" : latest.changeDirection === "down" ? "↓" : "=";
+                const color = latest.changeDirection === "up" ? "text-red-600" : latest.changeDirection === "down" ? "text-green-600" : "text-gray-500";
+                return (
+                  <p className={`font-semibold ${color}`}>
+                    {icon} {Math.abs(latest.changePercent)}%
+                  </p>
+                );
+              })()}
             </div>
             <div>
               <p className="text-muted-foreground text-xs">Reference Range</p>
