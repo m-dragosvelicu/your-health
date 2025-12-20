@@ -100,6 +100,12 @@ export function MedicationTracker() {
     },
   });
 
+  const logSkippedMutation = api.medication.logSkipped.useMutation({
+    onSuccess: async () => {
+      await utils.medication.getTodaySchedule.invalidate();
+    },
+  });
+
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
   const sortedSchedule = useMemo(
@@ -206,6 +212,17 @@ export function MedicationTracker() {
     });
   }
 
+  function handleLogSkipped(
+    medicationId: string,
+    time: string,
+  ) {
+    logSkippedMutation.mutate({
+      medicationId,
+      time,
+      date: new Date(),
+    });
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
       {/* Daily schedule */}
@@ -291,19 +308,57 @@ export function MedicationTracker() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant={isTaken ? "outline" : "default"}
-                        disabled={isTaken || logTakenMutation.isPending}
-                        onClick={() =>
-                          handleLogTaken(
-                            item.medicationId,
-                            item.time,
-                          )
-                        }
-                      >
-                        {isTaken ? "Taken" : "Mark taken"}
-                      </Button>
+                      {isPending && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="default"
+                            disabled={logTakenMutation.isPending || logSkippedMutation.isPending}
+                            onClick={() =>
+                              handleLogTaken(
+                                item.medicationId,
+                                item.time,
+                              )
+                            }
+                          >
+                            Take
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={logTakenMutation.isPending || logSkippedMutation.isPending}
+                            onClick={() =>
+                              handleLogSkipped(
+                                item.medicationId,
+                                item.time,
+                              )
+                            }
+                          >
+                            Skip
+                          </Button>
+                        </>
+                      )}
+                      {isTaken && (
+                        <Button size="sm" variant="outline" disabled>
+                          Taken
+                        </Button>
+                      )}
+                      {isSkipped && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-destructive text-destructive"
+                          disabled={logTakenMutation.isPending}
+                          onClick={() =>
+                            handleLogTaken(
+                              item.medicationId,
+                              item.time,
+                            )
+                          }
+                        >
+                          Undo skip
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );

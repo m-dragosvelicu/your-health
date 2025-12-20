@@ -175,6 +175,56 @@ export async function logMedicationTaken(
   });
 }
 
+export async function logMedicationSkipped(
+  userId: string,
+  medicationId: string,
+  date: Date,
+  time: string,
+) {
+  const medication = await db.medication.findFirst({
+    where: {
+      id: medicationId,
+      userId,
+      isActive: true,
+    },
+  });
+
+  if (!medication) {
+    return null;
+  }
+
+  const scheduledAt = buildScheduledDate(date, time);
+
+  const existing = await db.medicationLog.findFirst({
+    where: {
+      medicationId,
+      scheduledAt,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  if (existing) {
+    return db.medicationLog.update({
+      where: { id: existing.id },
+      data: {
+        status: "SKIPPED",
+        takenAt: null,
+      },
+    });
+  }
+
+  return db.medicationLog.create({
+    data: {
+      medicationId,
+      scheduledAt,
+      takenAt: null,
+      status: "SKIPPED",
+    },
+  });
+}
+
 export async function getTodaySchedule(
   userId: string,
   date: Date,

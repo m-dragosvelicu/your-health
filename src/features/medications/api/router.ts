@@ -9,6 +9,7 @@ import {
   getTodaySchedule,
   listMedications,
   logMedicationTaken,
+  logMedicationSkipped,
   softDeleteMedication,
   updateMedication,
 } from "../lib/medication-crud";
@@ -92,6 +93,27 @@ export const medicationRouter = createTRPCRouter({
         input.date ?? new Date(),
         input.time,
         input.takenAt,
+      );
+
+      return logged;
+    }),
+
+  logSkipped: protectedProcedure
+    .input(
+      z.object({
+        medicationId: z.string().min(1),
+        time: timeStringSchema,
+        date: z.date().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { session } = ctx;
+
+      const logged = await logMedicationSkipped(
+        session.user.id,
+        input.medicationId,
+        input.date ?? new Date(),
+        input.time,
       );
 
       return logged;
