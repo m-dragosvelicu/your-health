@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { format } from "date-fns";
 
 import { api, type RouterOutputs } from "~/trpc/trpc-provider";
 
@@ -87,16 +88,16 @@ export function LabsList({ labs }: LabsListProps) {
                 <div className="text-foreground">{lab.provider}</div>
               </td>
               <td className="px-4 py-3 align-top text-xs text-muted-foreground">
-                {lab.sampledAt ? new Date(lab.sampledAt).toLocaleDateString() : "—"}
+                {lab.sampledAt ? format(new Date(lab.sampledAt), "MMM d, yyyy") : "—"}
               </td>
               <td className="px-4 py-3 align-top text-xs text-muted-foreground">
-                {lab.resultAt ? new Date(lab.resultAt).toLocaleDateString() : "—"}
+                {lab.resultAt ? format(new Date(lab.resultAt), "MMM d, yyyy") : "—"}
               </td>
               <td className="px-4 py-3 align-top text-xs text-muted-foreground">
                 {lab.testsCount}
               </td>
               <td className="px-4 py-3 align-top text-xs text-muted-foreground">
-                {new Date(lab.createdAt).toLocaleString()}
+                {format(new Date(lab.createdAt), "MMM d, yyyy HH:mm")}
               </td>
               <td className="px-4 py-3 align-top text-right">
                 <button
