@@ -1,130 +1,122 @@
-# T3 Stack — Posts + Auth + tRPC
+# Your Health - Personal Health Tracker
 
-This repository is a minimal, working example of a modern full‑stack TypeScript app built with the T3 Stack. It shows how to:
-- Authenticate users with NextAuth (Discord provider by default)
-- Persist data using Prisma + PostgreSQL
-- Build type‑safe APIs with tRPC v11 and consume them with React Query
-- Hydrate server‑fetched data on the client
-- Style with Tailwind CSS 4
+A modern, full-stack health tracking application that helps users manage medications, track lab results, and monitor their health over time.
 
-It includes one simple feature: a signed‑in user can create a Post (title only) and see their latest post.
+## Features
 
-## Tech stack
-- Next.js 15 (App Router, RSC)
-- React 19
-- tRPC 11 + @tanstack/react-query 5
-- NextAuth.js 5 (beta) with Prisma adapter
-- Prisma 6 (PostgreSQL)
-- Tailwind CSS 4
-- SuperJSON for rich data serialization
-- Zod for input validation
+### Medications Management
+- Create and manage medications with dosage, frequency, and scheduled times
+- Track daily medication adherence with visual indicators
+- **Mark doses as taken** with timestamps
+- **Skip doses** with undo capability
+- **Snooze reminders** (10, 30, or 60 minutes) with auto-refresh
+- **Adherence tracking** with weekly and all-time percentages
+- Color-coded status: green (≥80%), amber (50-79%), red (<50%)
 
-Versions are pinned in `package.json`.
+### Lab Results
+- **AI-powered PDF import** - Upload any lab report and automatically extract results using Google Gemini
+- Supports any lab provider format
+- Preview and edit parsed values before saving
+- **Interactive charts** showing test values over time with reference ranges
+- Time period filters (Last, 3 months, 6 months, 12 months, All)
+- Track value changes with percentage indicators
+- Status indicators (normal, high, low) based on reference ranges
 
-## How the app works
-1. Authentication
-   - NextAuth is configured with PrismaAdapter and the Discord provider in `src/server/auth/config.ts`.
-   - Route handlers are mounted at `src/app/api/auth/[...nextauth]/route.ts` (exports `GET` and `POST`).
-   - `auth()` is used server‑side (e.g., in `src/app/page.tsx`) to check the current session.
+### Dashboard
+- Overview of health status
+- Quick access to medications and lab results
+- Lab values chart widget
 
-2. Database
-   - Prisma client is created in `src/server/db.ts` with dev‑friendly logging.
-   - The schema is defined in `prisma/schema.prisma` and includes `User`, `Account`, `Session`, `VerificationToken`, and a simple `Post` model. A `Post` belongs to a `User` via `createdBy`.
+## Tech Stack
 
-3. API layer (tRPC)
-   - tRPC server setup lives in `src/server/api/trpc.ts` and creates the context with `{ db, session }`.
-   - The root router is in `src/server/api/root.ts`. The `post` router (`src/server/api/routers/post.ts`) exposes:
-     - `hello`: public query returning a greeting
-     - `create`: protected mutation to create a new post for the current user
-     - `getLatest`: protected query returning the latest post for the current user
-     - `getSecretMessage`: protected query example
+- **Framework:** Next.js 15 (App Router, React Server Components)
+- **Frontend:** React 19, Tailwind CSS 4, Framer Motion
+- **Backend:** tRPC 11 + React Query 5
+- **Database:** PostgreSQL with Prisma 6 ORM
+- **Authentication:** NextAuth.js v5 with Google OAuth and email/password
+- **AI:** Google Gemini 2.5 Pro for lab report parsing
+- **Charts:** Recharts
+- **Validation:** Zod
 
-4. Client
-   - The home page (`src/app/page.tsx`) is a Server Component that:
-     - calls a server tRPC query (`api.post.hello`) and `auth()` to get the session
-     - prefetches `post.getLatest` when the user is logged in
-     - renders the `LatestPost` client component
-   - `LatestPost` (`src/app/_components/post.tsx`) uses the tRPC React hooks to:
-     - read `post.getLatest`
-     - submit the `post.create` mutation and invalidate the cache on success
-   - tRPC + React Query client wiring is in `src/trpc/react.tsx` and `src/trpc/query-client.ts`. Server hydration helpers are in `src/trpc/server`.
+## Getting Started
 
-## Project structure (high level)
-- `src/app` — App Router pages and components
-  - `page.tsx` — landing page that displays auth state and latest post
-  - `api/auth/[...nextauth]/route.ts` — NextAuth route handlers
-- `src/server` — backend code
-  - `api` — tRPC routers (`root.ts`, `trpc.ts`, `routers/post.ts`)
-  - `auth` — NextAuth configuration (`config.ts`) and exports
-  - `db.ts` — Prisma client
-- `prisma/schema.prisma` — data model
-- `start-database.sh` — helper script to run a local PostgreSQL container (Docker/Podman)
-
-## Running locally
-1) Prerequisites
+### Prerequisites
 - Node.js 20+
-- Docker or Podman (optional but recommended for local DB via the helper script)
+- PostgreSQL database
+- Google OAuth credentials (optional)
+- Google Gemini API key (for lab import feature)
 
-2) Configure environment variables
-Create a `.env` file in the project root with at least:
+### Environment Variables
 
-```
-# Database (PostgreSQL)
-DATABASE_URL="postgresql://postgres:password@localhost:5432/health_tracker_webapp"
+Create a `.env` file:
+
+```env
+# Database
+DATABASE_URL="postgresql://postgres:password@localhost:5432/health_tracker"
 
 # NextAuth
 NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="generate_a_random_VERY_SECURE_string"
+NEXTAUTH_SECRET="your-secret-key"
 
-# Discord provider (create an app at https://discord.com/developers)
-AUTH_DISCORD_ID="your_discord_client_id"
-AUTH_DISCORD_SECRET="your_discord_client_secret"
+# Google OAuth (optional)
+AUTH_GOOGLE_ID="your-google-client-id"
+AUTH_GOOGLE_SECRET="your-google-client-secret"
+
+# Google Gemini (for lab parsing)
+GEMINI_API_KEY="your-gemini-api-key"
 ```
 
-3) Start a local database (optional helper)
-- Run `./start-database.sh` to spin up a postgres container that matches your `DATABASE_URL`.
+### Installation
 
-4) Apply the database schema
-- Install dependencies: `npm install`
-- Generate and apply migrations: `npm run db:generate` (interactive) or `npm run db:push` (push schema without migrations)
+```bash
+# Install dependencies
+npm install
 
-5) Start the app
-- Dev server: `npm run dev` (http://localhost:3000)
-- Production preview: `npm run preview`
+# Set up the database
+npm run db:push
 
-## Common scripts
-- `npm run dev` — start Next.js in dev mode
-- `npm run build` — build for production
-- `npm run preview` — build and start
-- `npm run db:generate` — create/apply a new migration (dev)
-- `npm run db:migrate` — apply migrations in deploy environments
-- `npm run db:push` — push Prisma schema without migrations
-- `npm run db:studio` — open Prisma Studio
+# Start development server
+npm run dev
+```
 
-## Data model
-Post model (simplified):
-- id (Int, auto‑increment)
-- name (String)
-- createdAt / updatedAt
-- createdById (FK to User)
+Visit http://localhost:3000
 
-## Walkthrough
-- Visit the home page
-- Sign in with Discord (or any configured provider)
-- Create a post using the form; your latest post will display above the form
+## Project Structure
 
-## Notes and tips
-- Access control: use `protectedProcedure` for authenticated routes and `publicProcedure` otherwise.
-- Validation: use Zod in your procedures (see `postRouter`).
-- Serialization: SuperJSON is configured for both server and client to preserve Dates, etc.
-- Tailwind: preconfigured; edit classNames in components as needed.
+```
+src/
+├── app/                    # Next.js pages and API routes
+│   ├── (auth)/            # Authentication pages
+│   ├── (dashboard)/       # Protected dashboard pages
+│   └── api/               # REST and tRPC endpoints
+├── features/              # Feature modules
+│   ├── auth/              # Authentication logic
+│   ├── medications/       # Medication tracking
+│   └── labs/              # Lab results management
+├── shared/                # Shared utilities and components
+│   ├── components/        # UI components
+│   └── server/            # Server utilities, auth, database
+└── trpc/                  # tRPC client configuration
+```
 
-## Deployment
-You can deploy to any Next.js‑compatible platform (Vercel, Netlify, Docker, etc.). Ensure environment variables are set and run:
-- `npm run build`
-- `npm start`
+## Scripts
 
-For more on the T3 Stack, see https://create.t3.gg/. 
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run start` | Start production server |
+| `npm run db:push` | Push Prisma schema to database |
+| `npm run db:studio` | Open Prisma Studio |
 
+## Authentication
 
-<!-- The project’s public landing page is the home route `/`. -->
+The app supports multiple authentication methods:
+- **Google OAuth** - Sign in with Google account
+- **Email/Password** - Traditional credentials with password reset via email
+
+Security features include rate limiting, bcrypt password hashing, and JWT sessions.
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
