@@ -372,3 +372,87 @@ export async function getTodaySchedule(
   return schedule;
 }
 
+export type AdherenceStats = {
+  weekly: {
+    taken: number;
+    total: number;
+    percentage: number;
+  };
+  allTime: {
+    taken: number;
+    total: number;
+    percentage: number;
+  };
+};
+
+export async function getAdherence(userId: string): Promise<AdherenceStats> {
+  const now = new Date();
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  weekAgo.setHours(0, 0, 0, 0);
+
+  // Get all active medications for this user
+  const medications = await db.medication.findMany({
+    where: {
+      userId,
+      isActive: true,
+    },
+    include: {
+      logs: true,
+    },
+  });
+
+  let weeklyTaken = 0;
+  let weeklyTotal = 0;
+  let allTimeTaken = 0;
+  let allTimeTotal = 0;
+
+  for (const medication of medications) {
+    const startDate = medication.startDate;
+    const endDate = medication.endDate ?? now;
+    const timesPerDay = medication.times.length;
+
+    // Calculate all-time expected doses
+    const daysSinceStart = Math.max(
+      0,
+      Math.ceil((Math.min(now.getTime(), endDate.getTime()) - startDate.getTime()) / (1000 * 60 * 60 * 24)),
+    );
+    const allTimeExpected = daysSinceStart * timesPerDay;
+    allTimeTotal += allTimeExpected;
+
+    // Calculate weekly expected doses
+    const weekStart = weekAgo > startDate ? weekAgo : startDate;
+    const weekEnd = endDate < now ? endDate : now;
+    if (weekEnd > weekStart) {
+      const daysInWeek = Math.ceil((weekEnd.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24));
+      weeklyTotal += daysInWeek * timesPerDay;
+    }
+
+    // Count taken logs
+    for (const log of medication.logs) {
+      if (log.status === "TAKEN") {
+        allTimeTaken++;
+        if (log.scheduledAt >= weekAgo) {
+          weeklyTaken++;
+        }
+      }
+    }
+  }
+
+  const weeklyPercentage = weeklyTotal > 0 ? Math.round((weeklyTaken / weeklyTotal) * 100) : 0;
+  const allTimePercentage = allTimeTotal > 0 ? Math.round((allTimeTaken / allTimeTotal) * 100) : 0;
+
+  return {
+    weekly: {
+      taken: weeklyTaken,
+      total: weeklyTotal,
+      percentage: weeklyPercentage,
+    },
+    allTime: {
+      taken: allTimeTaken,
+      total: allTimeTotal,
+      percentage: allTimePercentage,
+    },
+  };
+}
+

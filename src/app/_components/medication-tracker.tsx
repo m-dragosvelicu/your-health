@@ -57,11 +57,14 @@ export function MedicationTracker() {
     isError: scheduleError,
   } = api.medication.getTodaySchedule.useQuery({});
 
+  const { data: adherence } = api.medication.getAdherence.useQuery();
+
   const createMutation = api.medication.create.useMutation({
     onSuccess: async () => {
       await Promise.all([
         utils.medication.list.invalidate(),
         utils.medication.getTodaySchedule.invalidate(),
+        utils.medication.getAdherence.invalidate(),
       ]);
       setForm(emptyForm);
       setFormError(null);
@@ -76,6 +79,7 @@ export function MedicationTracker() {
       await Promise.all([
         utils.medication.list.invalidate(),
         utils.medication.getTodaySchedule.invalidate(),
+        utils.medication.getAdherence.invalidate(),
       ]);
       setForm(emptyForm);
       setFormError(null);
@@ -90,19 +94,26 @@ export function MedicationTracker() {
       await Promise.all([
         utils.medication.list.invalidate(),
         utils.medication.getTodaySchedule.invalidate(),
+        utils.medication.getAdherence.invalidate(),
       ]);
     },
   });
 
   const logTakenMutation = api.medication.logTaken.useMutation({
     onSuccess: async () => {
-      await utils.medication.getTodaySchedule.invalidate();
+      await Promise.all([
+        utils.medication.getTodaySchedule.invalidate(),
+        utils.medication.getAdherence.invalidate(),
+      ]);
     },
   });
 
   const logSkippedMutation = api.medication.logSkipped.useMutation({
     onSuccess: async () => {
-      await utils.medication.getTodaySchedule.invalidate();
+      await Promise.all([
+        utils.medication.getTodaySchedule.invalidate(),
+        utils.medication.getAdherence.invalidate(),
+      ]);
     },
   });
 
@@ -268,6 +279,42 @@ export function MedicationTracker() {
             {format(new Date(), "MMM d, yyyy")}
           </span>
         </div>
+
+        {/* Adherence Summary */}
+        {adherence && (adherence.weekly.total > 0 || adherence.allTime.total > 0) && (
+          <div className="mb-4 grid grid-cols-2 gap-3 rounded-lg border bg-muted/30 p-3">
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground">This Week</p>
+              <p className={`text-lg font-bold ${
+                adherence.weekly.percentage >= 80
+                  ? "text-green-600"
+                  : adherence.weekly.percentage >= 50
+                    ? "text-amber-600"
+                    : "text-red-600"
+              }`}>
+                {adherence.weekly.percentage}%
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {adherence.weekly.taken}/{adherence.weekly.total} doses
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground">All Time</p>
+              <p className={`text-lg font-bold ${
+                adherence.allTime.percentage >= 80
+                  ? "text-green-600"
+                  : adherence.allTime.percentage >= 50
+                    ? "text-amber-600"
+                    : "text-red-600"
+              }`}>
+                {adherence.allTime.percentage}%
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {adherence.allTime.taken}/{adherence.allTime.total} doses
+              </p>
+            </div>
+          </div>
+        )}
 
         {scheduleLoading && (
           <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">

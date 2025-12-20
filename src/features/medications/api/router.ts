@@ -6,6 +6,7 @@ import {
 } from "@/shared/server/api/trpc";
 import {
   createMedication,
+  getAdherence,
   getTodaySchedule,
   listMedications,
   logMedicationTaken,
@@ -157,5 +158,10 @@ export const medicationRouter = createTRPCRouter({
 
       return getTodaySchedule(session.user.id, date);
     }),
+
+  getAdherence: protectedProcedure.query(async ({ ctx }) => {
+    const { session } = ctx;
+    return getAdherence(session.user.id);
+  }),
 });
 
