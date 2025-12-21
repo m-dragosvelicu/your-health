@@ -5,6 +5,7 @@ import { format } from "date-fns";
 
 import { api } from "~/trpc/trpc-provider";
 import { Button } from "@/shared/components/ui/button";
+import { useAnalytics } from "@/features/analytics";
 
 type MedicationFormState = {
   id?: string;
@@ -41,6 +42,7 @@ function formatDateInput(value: Date | string | null | undefined): string {
 
 export function MedicationTracker() {
   const utils = api.useUtils();
+  const { trackFeature } = useAnalytics();
 
   const [form, setForm] = useState<MedicationFormState>(emptyForm);
   const [formError, setFormError] = useState<string | null>(null);
@@ -68,6 +70,8 @@ export function MedicationTracker() {
       ]);
       setForm(emptyForm);
       setFormError(null);
+      // Track medication creation (count only, no medication name/details)
+      trackFeature("medications", "create");
     },
     onError: (err) => {
       setFormError(err.message || "Failed to save medication.");
@@ -105,6 +109,8 @@ export function MedicationTracker() {
         utils.medication.getTodaySchedule.invalidate(),
         utils.medication.getAdherence.invalidate(),
       ]);
+      // Track medication taken (count only, no medication details)
+      trackFeature("medications", "taken");
     },
   });
 
@@ -114,6 +120,8 @@ export function MedicationTracker() {
         utils.medication.getTodaySchedule.invalidate(),
         utils.medication.getAdherence.invalidate(),
       ]);
+      // Track medication skipped (count only)
+      trackFeature("medications", "skipped");
     },
   });
 
