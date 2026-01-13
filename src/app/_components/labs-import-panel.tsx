@@ -2,6 +2,7 @@
 
 import type { ChangeEvent, FormEvent } from "react";
 import { useRef, useState } from "react";
+import { useAnalytics } from "@/features/analytics";
 
 type LabPatient = {
   last_name: string;
@@ -49,6 +50,7 @@ type ConfirmResponse = {
 };
 
 export default function LabsImportPanel() {
+  const { trackFeature } = useAnalytics();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<UploadedLab | null>(null);
@@ -159,6 +161,8 @@ export default function LabsImportPanel() {
 
       setLabId(data.labId);
       setSuccess(true);
+      // Track lab upload success (count only, no test values/names)
+      trackFeature("labs", "upload");
     } catch (err) {
       console.error("[LabsImportPanel] Failed to confirm labs", err);
       setError("Failed to save lab results. Please try again.");

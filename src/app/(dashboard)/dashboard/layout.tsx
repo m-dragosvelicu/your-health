@@ -17,6 +17,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <a href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</a>
             <a href="/dashboard/labs" className="hover:text-foreground transition-colors">Labs</a>
             <a href="/dashboard/medications" className="hover:text-foreground transition-colors">Medications</a>
+            <a href="/dashboard/analytics" className="hover:text-foreground transition-colors">Analytics</a>
             <SettingsDropdown />
           </nav>
         </div>

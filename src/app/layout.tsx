@@ -5,6 +5,7 @@ import { Geist } from "next/font/google";
 
 import { TRPCReactProvider } from "~/trpc/trpc-provider";
 import { AuthSessionProvider } from "@/shared/components/session-provider";
+import { AnalyticsProvider } from "@/features/analytics";
 import React from "react";
 
 // App-wide metadata for the Next.js App Router. This is used to populate <head>
@@ -31,7 +32,10 @@ export default function RootLayout({
         {/* Provide session context for authentication */}
         <AuthSessionProvider>
           {/* Provide tRPC client context to enable hooks in client components */}
-          <TRPCReactProvider>{children}</TRPCReactProvider>
+          <TRPCReactProvider>
+            {/* Privacy-respecting analytics - tracks usage patterns without PII */}
+            <AnalyticsProvider>{children}</AnalyticsProvider>
+          </TRPCReactProvider>
         </AuthSessionProvider>
       </body>
     </html>

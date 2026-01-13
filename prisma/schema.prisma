@@ -198,3 +198,91 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+// ============================================================================
+// ANALYTICS - Privacy-Respecting User Tracking
+// ============================================================================
+// These models track usage patterns WITHOUT capturing sensitive health data.
+// Only behavioral events (page views, feature usage) are tracked.
+// No PHI (Protected Health Information) is ever stored in analytics.
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // Anonymous session identifier (NOT the user ID - privacy first)
+  // This is a hashed, rotating session ID that can't be linked back to user identity
+  sessionId String
+
+  // Optional user reference for aggregate stats (never exposed individually)
+  // Used only for counting unique users, not for tracking individuals
+  userId String?
+
+  // Event classification
+  category  String // e.g., "page_view", "feature", "engagement", "error"
+  action    String // e.g., "view", "click", "upload", "create", "delete"
+  label     String? // e.g., "dashboard", "labs", "medications" (feature name, NOT content)
+
+  // Numeric value for aggregation (e.g., duration in seconds, count)
+  value Float?
+
+  // Page/route information (path only, no query params with sensitive data)
+  path String?
+
+  // Device/browser category (NOT fingerprinting - just broad categories)
+  deviceType String? // "desktop", "mobile", "tablet"
+
+  // Referrer domain only (not full URL)
+  referrerDomain String?
+
+  @@index([createdAt])
+  @@index([sessionId])
+  @@index([category, action])
+  @@index([userId, createdAt])
+}
+
+// Aggregated daily statistics for efficient dashboard queries
+// Pre-computed to avoid scanning raw events
+model AnalyticsDailyStat {
+  id   String   @id @default(cuid())
+  date DateTime @db.Date
+
+  // Metrics
+  pageViews      Int @default(0)
+  uniqueSessions Int @default(0)
+  uniqueUsers    Int @default(0)
+
+  // Feature usage counts
+  labsUploaded        Int @default(0)
+  medicationsCreated  Int @default(0)
+  medicationsLogged   Int @default(0)
+
+  // Engagement metrics
+  avgSessionDuration Float? // in seconds
+  totalSessionTime   Float  @default(0) // in seconds
+
+  // Error tracking (count only, no details)
+  errorCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([date])
+  @@index([date])
+}
+
+// Feature-specific usage tracking (aggregated)
+model AnalyticsFeatureUsage {
+  id   String   @id @default(cuid())
+  date DateTime @db.Date
+
+  feature String // "labs", "medications", "dashboard", "auth"
+  action  String // "view", "create", "update", "delete"
+  count   Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@unique([date, feature, action])
+  @@index([date])
+  @@index([feature])
+}
