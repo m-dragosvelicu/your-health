@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import * as dotenv from "dotenv";
 
 dotenv.config();
@@ -10,12 +9,23 @@ async function listModels() {
     process.exit(1);
   }
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-
   console.log("📋 Fetching available models...\n");
 
   try {
-    const models = await genAI.listModels();
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+    );
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+    const data = (await res.json()) as {
+      models?: Array<{
+        name: string;
+        description?: string;
+        supportedGenerationMethods?: string[];
+      }>;
+    };
+    const models = data.models ?? [];
 
     console.log("✅ Available models:\n");
     for (const model of models) {

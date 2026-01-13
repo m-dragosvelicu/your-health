@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { parseSynevo } from "./parse-synevo";
+import { parseSynevo, type ParsedLab } from "./parse-synevo";
+
+const parseSynevoSafe = parseSynevo as (text: string) => ParsedLab;
 
 describe("parseSynevo", () => {
   it("parses patient metadata and basic sections from Synevo-style text", () => {
@@ -18,18 +20,18 @@ describe("parseSynevo", () => {
       "Anti-Thyroglobulin Antibody                  > 4000    IU/mL   < 115",
     ].join("\n");
 
-    const result = parseSynevo(text);
+    const result = parseSynevoSafe(text);
 
     expect(result.patient).toEqual({
-      last_name: "Velicu",
-      first_name: "Mihail Dragos",
-      birthdate: "2004-07-07",
+      lastName: "Velicu",
+      firstName: "Mihail Dragos",
+      birthdate: new Date(2004, 6, 7),
     });
 
     expect(result.meta).toEqual({
       provider: "Synevo",
-      sampling_date: "2025-11-19",
-      result_date: "2025-11-20",
+      sampledAt: new Date(2025, 10, 19, 8, 12),
+      resultAt: new Date(2025, 10, 20),
     });
 
     expect(result.tests).toEqual([
@@ -37,17 +39,17 @@ describe("parseSynevo", () => {
         section: "Biochemistry",
         name: "Alanine Aminotransferase (GPT/ALAT/ALT)",
         value: 67,
-        raw_value: "67",
+        rawValue: "67",
         unit: "U/L",
-        ref_raw: "< 50",
+        refRaw: "< 50",
       },
       {
         section: "Immunochemistry",
         name: "Anti-Thyroglobulin Antibody",
         value: null,
-        raw_value: "> 4000",
+        rawValue: "> 4000",
         unit: "IU/mL",
-        ref_raw: "< 115",
+        refRaw: "< 115",
       },
     ]);
   });
@@ -60,16 +62,16 @@ describe("parseSynevo", () => {
       "Some weird row without numbers or units",
     ].join("\n");
 
-    const result = parseSynevo(text);
+    const result = parseSynevoSafe(text);
 
     expect(result.tests).toEqual([
       {
         section: "Biochemistry",
         name: "Direct Bilirubin",
         value: 0.306,
-        raw_value: "0.306",
+        rawValue: "0.306",
         unit: "mg/dL",
-        ref_raw: "≤ 0.3",
+        refRaw: "≤ 0.3",
       },
     ]);
   });
@@ -80,9 +82,8 @@ describe("parseSynevo", () => {
       "Na                                      135       mmol/L    135 - 145",
     ].join("\n");
 
-    const result = parseSynevo(text);
+    const result = parseSynevoSafe(text);
 
     expect(result.tests).toEqual([]);
   });
 });
-

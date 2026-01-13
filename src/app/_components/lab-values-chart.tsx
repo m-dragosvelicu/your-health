@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import {
   CartesianGrid,
+  type DotItemDotProps,
   Line,
   LineChart,
   ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
+  type TooltipContentProps,
   XAxis,
   YAxis,
 } from "recharts";
@@ -41,6 +43,114 @@ const TIME_FILTER_OPTIONS: { value: TimeFilter; label: string; days: number }[] 
   { value: "all", label: "All", days: 0 },
 ];
 
+type TestsResponse =
+  | { ok: true; tests: TestOption[] }
+  | { ok: false; error?: string };
+
+type HistoryResponse =
+  | { ok: true; data: DataPoint[] }
+  | { ok: false; error?: string };
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const isNullableString = (value: unknown): value is string | null =>
+  value === null || typeof value === "string";
+
+const isNullableNumber = (value: unknown): value is number | null =>
+  value === null || typeof value === "number";
+
+const isChangeDirection = (
+  value: unknown,
+): value is DataPoint["changeDirection"] =>
+  value === null || value === "up" || value === "down" || value === "same";
+
+const isTestOption = (value: unknown): value is TestOption => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.name === "string" &&
+    isNullableString(value.unit) &&
+    isNullableString(value.section)
+  );
+};
+
+const isDataPoint = (value: unknown): value is DataPoint => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.date === "string" &&
+    isNullableNumber(value.value) &&
+    typeof value.rawValue === "string" &&
+    isNullableString(value.unit) &&
+    isNullableString(value.referenceRange) &&
+    typeof value.provider === "string" &&
+    isNullableNumber(value.previousValue) &&
+    isNullableNumber(value.changePercent) &&
+    isChangeDirection(value.changeDirection)
+  );
+};
+
+const parseTestsResponse = (value: unknown): TestsResponse | null => {
+  if (!isRecord(value) || typeof value.ok !== "boolean") {
+    return null;
+  }
+
+  if (value.ok) {
+    const tests = value.tests;
+    if (!Array.isArray(tests)) {
+      return null;
+    }
+
+    const parsedTests: TestOption[] = [];
+    for (const test of tests) {
+      if (!isTestOption(test)) {
+        return null;
+      }
+      parsedTests.push(test);
+    }
+
+    return { ok: true, tests: parsedTests };
+  }
+
+  return {
+    ok: false,
+    error: typeof value.error === "string" ? value.error : undefined,
+  };
+};
+
+const parseHistoryResponse = (value: unknown): HistoryResponse | null => {
+  if (!isRecord(value) || typeof value.ok !== "boolean") {
+    return null;
+  }
+
+  if (value.ok) {
+    const data = value.data;
+    if (!Array.isArray(data)) {
+      return null;
+    }
+
+    const parsedData: DataPoint[] = [];
+    for (const point of data) {
+      if (!isDataPoint(point)) {
+        return null;
+      }
+      parsedData.push(point);
+    }
+
+    return { ok: true, data: parsedData };
+  }
+
+  return {
+    ok: false,
+    error: typeof value.error === "string" ? value.error : undefined,
+  };
+};
+
 export default function LabValuesChart() {
   const [availableTests, setAvailableTests] = useState<TestOption[]>([]);
   const [selectedTest, setSelectedTest] = useState<string>("");
@@ -55,19 +165,25 @@ export default function LabValuesChart() {
     async function fetchTests() {
       try {
         const res = await fetch("/api/labs/tests");
-        const json = await res.json();
+        const payload: unknown = await res.json();
+        const json = parseTestsResponse(payload);
+        if (!json) {
+          throw new Error("Unexpected tests response");
+        }
         if (json.ok) {
           setAvailableTests(json.tests);
           // Auto-select first test
-          if (json.tests.length > 0) {
+          if (json.tests[0]) {
             setSelectedTest(json.tests[0].name);
           }
+        } else if (json.error) {
+          throw new Error(json.error);
         }
       } catch (err) {
         console.error("Failed to fetch tests", err);
       }
     }
-    fetchTests();
+    void fetchTests();
   }, []);
 
   // Fetch history when selected test or time filter changes
@@ -81,16 +197,25 @@ export default function LabValuesChart() {
         const filterDays = TIME_FILTER_OPTIONS.find((f) => f.value === timeFilter)?.days ?? 0;
         const url = `/api/labs/history?testName=${encodeURIComponent(selectedTest)}${filterDays > 0 ? `&days=${filterDays}` : ""}`;
         const res = await fetch(url);
-        const json = await res.json();
+        const payload: unknown = await res.json();
+        const json = parseHistoryResponse(payload);
+        if (!json) {
+          throw new Error("Unexpected history response");
+        }
         if (json.ok) {
           // For "last" filter, only show the most recent result
           if (timeFilter === "last" && json.data.length > 0) {
-            setData([json.data[json.data.length - 1]]);
+            const latest = json.data[json.data.length - 1];
+            if (latest) {
+              setData([latest]);
+            } else {
+              setData([]);
+            }
           } else {
             setData(json.data);
           }
         } else {
-          setError(json.error || "Failed to load data");
+          setError(json.error ?? "Failed to load data");
         }
       } catch (err) {
         setError("Failed to load chart data");
@@ -99,7 +224,7 @@ export default function LabValuesChart() {
         setLoading(false);
       }
     }
-    fetchHistory();
+    void fetchHistory();
   }, [selectedTest, timeFilter]);
 
   const filteredTests = availableTests.filter((test) =>
@@ -114,16 +239,16 @@ export default function LabValuesChart() {
   let refLow: number | null = null;
   let refHigh: number | null = null;
   if (referenceInfo) {
-    const rangeMatch = referenceInfo.match(/([\d.]+)\s*-\s*([\d.]+)/);
-    const ltMatch = referenceInfo.match(/[<≤]\s*([\d.]+)/);
-    const gtMatch = referenceInfo.match(/[>≥]\s*([\d.]+)/);
+    const rangeMatch = /([\d.]+)\s*-\s*([\d.]+)/.exec(referenceInfo);
+    const ltMatch = /[<≤]\s*([\d.]+)/.exec(referenceInfo);
+    const gtMatch = /[>≥]\s*([\d.]+)/.exec(referenceInfo);
 
-    if (rangeMatch) {
+    if (rangeMatch?.[1] && rangeMatch?.[2]) {
       refLow = parseFloat(rangeMatch[1]);
       refHigh = parseFloat(rangeMatch[2]);
-    } else if (ltMatch) {
+    } else if (ltMatch?.[1]) {
       refHigh = parseFloat(ltMatch[1]);
-    } else if (gtMatch) {
+    } else if (gtMatch?.[1]) {
       refLow = parseFloat(gtMatch[1]);
     }
   }
@@ -140,7 +265,8 @@ export default function LabValuesChart() {
     domainCandidates.length > 0 ? Math.min(...domainCandidates) : 0;
   const maxValue =
     domainCandidates.length > 0 ? Math.max(...domainCandidates) : 100;
-  const padding = (maxValue - minValue) * 0.2 || 10;
+  const rawPadding = (maxValue - minValue) * 0.2;
+  const padding = rawPadding === 0 ? 10 : rawPadding;
   const yMin = Math.max(0, minValue - padding);
   const yMax = maxValue + padding;
 
@@ -270,7 +396,7 @@ export default function LabValuesChart() {
                 tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                 stroke="hsl(var(--border))"
                 label={{
-                  value: unit || "",
+                  value: unit ?? "",
                   angle: -90,
                   position: "insideLeft",
                   style: { fontSize: 12, fill: "hsl(var(--muted-foreground))" },
@@ -321,13 +447,23 @@ export default function LabValuesChart() {
               )}
 
               <Tooltip
-                content={({ active, payload }) => {
-                  if (active && payload && payload.length) {
-                    const data = payload[0].payload as DataPoint;
-                    const isHigh =
-                      refHigh !== null &&
-                      data.value !== null &&
-                      data.value > refHigh;
+                content={({ active, payload }: TooltipContentProps<number, string>) => {
+                  if (!active) {
+                    return null;
+                  }
+                  const payloadItem: unknown = payload[0];
+                  if (!isRecord(payloadItem)) {
+                    return null;
+                  }
+                  const point = payloadItem.payload;
+                  if (!isDataPoint(point)) {
+                    return null;
+                  }
+                  const data = point;
+                  const isHigh =
+                    refHigh !== null &&
+                    data.value !== null &&
+                    data.value > refHigh;
                     const isLow =
                       refLow !== null &&
                       data.value !== null &&
@@ -392,7 +528,6 @@ export default function LabValuesChart() {
                         </p>
                       </div>
                     );
-                  }
                   return null;
                 }}
               />
@@ -405,16 +540,20 @@ export default function LabValuesChart() {
                 strokeOpacity={0.95}
                 connectNulls
                 isAnimationActive={false}
-                dot={(props) => {
-                  const { cx, cy, payload } = props;
+                dot={(props: DotItemDotProps) => {
+                  const { cx, cy } = props;
+                  const point: unknown = props.payload;
+                  if (!isDataPoint(point) || cx === undefined || cy === undefined) {
+                    return null;
+                  }
                   const isHigh =
                     refHigh !== null &&
-                    payload.value !== null &&
-                    payload.value > refHigh;
+                    point.value !== null &&
+                    point.value > refHigh;
                   const isLow =
                     refLow !== null &&
-                    payload.value !== null &&
-                    payload.value < refLow;
+                    point.value !== null &&
+                    point.value < refLow;
 
                   return (
                     <circle
@@ -458,7 +597,7 @@ export default function LabValuesChart() {
             </div>
             <div>
               <p className="text-muted-foreground text-xs">Reference Range</p>
-              <p className="font-medium">{referenceInfo || "N/A"}</p>
+              <p className="font-medium">{referenceInfo ?? "N/A"}</p>
             </div>
             <div>
               <p className="text-muted-foreground text-xs">Data Points</p>

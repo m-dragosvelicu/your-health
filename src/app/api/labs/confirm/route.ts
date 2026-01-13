@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = await req.json();
+    const body: unknown = await req.json();
     const validated = ConfirmLabSchema.parse(body);
 
     // Convert to the format expected by saveParsedLab

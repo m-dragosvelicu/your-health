@@ -4,8 +4,6 @@ import { medicationRouter } from "@/features/medications";
 import { postRouter } from "@/features/posts";
 import { createCallerFactory, createTRPCRouter } from "@/shared/server/api/trpc";
 import { biomarkerRouter } from "./routers/biomarker";
-import { labReportRouter } from "./routers/lab-report";
-import { measurementRouter } from "./routers/measurement";
 
 /**
  * This is the primary router for your server.
@@ -18,8 +16,6 @@ export const appRouter = createTRPCRouter({
   medication: medicationRouter,
   post: postRouter,
   biomarker: biomarkerRouter,
-  labReport: labReportRouter,
-  measurement: measurementRouter,
 });
 
 // export type definition of API

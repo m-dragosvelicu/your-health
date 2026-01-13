@@ -100,13 +100,14 @@ ${text}`;
   const responseText = message.content[0]?.type === "text" ? message.content[0].text : "";
 
   // Extract JSON from potential markdown code blocks
-  const jsonMatch = responseText.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/) ||
-                    responseText.match(/(\{[\s\S]*\})/);
+  const fencedMatch = /```(?:json)?\s*(\{[\s\S]*\})\s*```/.exec(responseText);
+  const jsonMatch = fencedMatch ?? /(\{[\s\S]*\})/.exec(responseText);
 
-  if (!jsonMatch) {
+  const jsonText = jsonMatch?.[1];
+  if (!jsonText) {
     throw new Error("Failed to extract JSON from LLM response");
   }
 
-  const parsed = JSON.parse(jsonMatch[1]);
+  const parsed: unknown = JSON.parse(jsonText);
   return ParsedLabSchema.parse(parsed);
 }

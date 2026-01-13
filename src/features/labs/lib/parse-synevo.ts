@@ -1,6 +1,5 @@
 import "server-only";
 
-import type { PdfDocumentProxy } from "pdf-parse";
 import type pdfParseModule from "pdf-parse";
 
 export type ParsedLabPatient = {
@@ -34,7 +33,7 @@ export type ParsedLab = {
 type PdfParseResult = {
   text: string;
   numpages: number;
-  info?: PdfDocumentProxy["info"];
+  info?: Record<string, unknown>;
 };
 
 async function loadPdfParse(): Promise<(data: Buffer) => Promise<PdfParseResult>> {
@@ -51,6 +50,10 @@ export async function parseSynevoPdf(buffer: Buffer): Promise<ParsedLab> {
   const result = await pdfParse(buffer);
 
   return parseSynevoText(result.text);
+}
+
+export function parseSynevo(text: string): ParsedLab {
+  return parseSynevoText(text);
 }
 
 export function parseSynevoText(text: string): ParsedLab {
@@ -91,17 +94,17 @@ function extractHeader(lines: string[]): {
     }
     if (!birthdate) {
       const m = /Birthdate:\s*([0-9./-]+)/i.exec(line);
-      if (m) birthdate = parseSynevoDate(m[1]);
+      if (m?.[1]) birthdate = parseSynevoDate(m[1]);
     }
     if (!sampledAt) {
       const m = /Sampling date:\s*([0-9./-]+\s+[0-9:]+)/i.exec(line);
-      if (m) sampledAt = parseSynevoDateTime(m[1]);
+      if (m?.[1]) sampledAt = parseSynevoDateTime(m[1]);
     }
     if (!resultAt) {
       const m =
         /Result date:\s*([0-9./-]+(?:\s+[0-9:]+)?)/i.exec(line) ??
         /Result date:\s*([0-9./-]+)/i.exec(line);
-      if (m) resultAt = parseSynevoDateTime(m[1]);
+      if (m?.[1]) resultAt = parseSynevoDateTime(m[1]);
     }
   }
 
@@ -174,8 +177,12 @@ function parseTestRow(line: string, section: string): ParsedLabTest | null {
   //   Anti-Thyroglobulin Antibody                 > 4000 IU/mL < 115
   const cleaned = line.replace(/\s+/g, " ").trim();
 
-  const valueMatch = cleaned.match(/([<>]=?\s*)?(\d+(?:[.,]\d+)?)/);
-  if (!valueMatch || valueMatch.index === undefined) {
+  const valueMatch = /([<>]=?\s*)?(\d+(?:[.,]\d+)?)/.exec(cleaned);
+  if (valueMatch?.index === undefined) {
+    return null;
+  }
+  const valueText = valueMatch[2];
+  if (!valueText) {
     return null;
   }
 
@@ -187,17 +194,17 @@ function parseTestRow(line: string, section: string): ParsedLabTest | null {
   // Drop technical prefixes like "LC" if present.
   const name = prefix.replace(/^LC\s+/i, "").trim();
 
-  const rawValue = `${valueMatch[1] ?? ""}${valueMatch[2]}`.trim();
+  const rawValue = `${valueMatch[1] ?? ""}${valueText}`.trim();
   let numericValue: number | null = null;
 
   if (!rawValue.startsWith("<") && !rawValue.startsWith(">")) {
-    const asNumber = Number.parseFloat(valueMatch[2].replace(",", "."));
+    const asNumber = Number.parseFloat(valueText.replace(",", "."));
     if (!Number.isNaN(asNumber)) {
       numericValue = asNumber;
     }
   }
 
-  let rest = cleaned.slice(valueMatch.index + rawValue.length).trim();
+  const rest = cleaned.slice(valueMatch.index + rawValue.length).trim();
   if (!rest) {
     return {
       section,
@@ -232,7 +239,8 @@ function parseTestRow(line: string, section: string): ParsedLabTest | null {
   }
 
   const unit = unitTokens.length > 0 ? unitTokens.join(" ") : null;
-  const refRaw = parts.slice(idx).join(" ").trim() || null;
+  const refRawText = parts.slice(idx).join(" ").trim();
+  const refRaw = refRawText.length > 0 ? refRawText : null;
 
   // Very short names or missing units are likely false positives.
   if (!unit) {
@@ -261,6 +269,7 @@ function parseSynevoDate(value: string): Date | null {
   const m = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/.exec(trimmed);
   if (!m) return null;
   const [, dd, mm, yyyy] = m;
+  if (!dd || !mm || !yyyy) return null;
   const day = Number.parseInt(dd, 10);
   const month = Number.parseInt(mm, 10);
   const year = Number.parseInt(yyyy, 10);
@@ -280,6 +289,7 @@ function parseSynevoDateTime(value: string): Date | null {
   if (!m) return parseSynevoDate(trimmed);
 
   const [, dd, mm, yyyy, hh, min] = m;
+  if (!dd || !mm || !yyyy) return null;
   const day = Number.parseInt(dd, 10);
   const month = Number.parseInt(mm, 10);
   const year = Number.parseInt(yyyy, 10);
@@ -298,4 +308,3 @@ function parseSynevoDateTime(value: string): Date | null {
 
   return new Date(year, month - 1, day, hours, minutes);
 }
-
