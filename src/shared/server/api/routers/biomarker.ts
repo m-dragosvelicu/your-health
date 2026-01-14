@@ -1,3 +1,13 @@
+/**
+ * STUB: Biomarker router - future work
+ *
+ * This router provides CRUD for a biomarker reference catalog, but the catalog
+ * is NOT currently linked to LabTest results. To provide value, needs:
+ * 1. Alias/mapping system to link parsed test names to canonical biomarkers
+ * 2. Integration into PDF parsing pipeline
+ * 3. Expanded catalog (currently only 13 biomarkers, real-world has hundreds)
+ */
+
 import { TRPCError } from "@trpc/server";
 import { type Prisma } from "@prisma/client";
 

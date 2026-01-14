@@ -117,6 +117,14 @@ model MedicationLog {
   @@index([medicationId, scheduledAt])
 }
 
+// =============================================================================
+// STUB: Biomarker system - future work
+// Currently not linked to LabTest. To be useful, needs:
+// 1. Alias table to map variations (e.g., "Thyroid Stimulating Hormone" → "TSH")
+// 2. Integration into PDF parsing pipeline
+// 3. UI for manual linking
+// =============================================================================
+
 enum BiomarkerCategory {
   CBC
   METABOLIC

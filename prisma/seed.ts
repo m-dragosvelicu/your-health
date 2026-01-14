@@ -1,3 +1,15 @@
+/**
+ * STUB: Biomarker seed data - future work
+ *
+ * Seeds 13 common biomarkers as reference data. Currently not used by the app
+ * because there's no linking between LabTest and Biomarker.
+ *
+ * To make this useful, need to implement:
+ * 1. Alias table mapping test name variations to canonical biomarkers
+ * 2. Linking logic during PDF parsing or manual user linking
+ * 3. Expanded catalog (hundreds of biomarkers exist in real lab reports)
+ */
+
 import { PrismaClient, BiomarkerCategory } from "@prisma/client";
 
 const db = new PrismaClient();
