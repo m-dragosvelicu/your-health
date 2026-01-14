@@ -7,30 +7,22 @@ export const env = createEnv({
    * isn't built with invalid env vars.
    */
   server: {
-    AUTH_SECRET:
-      process.env.NODE_ENV === "production"
-        ? z.string()
-        : z.string().optional(),
-    AUTH_DISCORD_ID: z.string(),
-    AUTH_DISCORD_SECRET: z.string(),
-    GOOGLE_CLIENT_ID:
-      process.env.NODE_ENV === "production" ? z.string() : z.string().optional(),
-    GOOGLE_CLIENT_SECRET:
-      process.env.NODE_ENV === "production" ? z.string() : z.string().optional(),
-    DATABASE_URL: z.string().url(),
-    EMAIL_FROM:
-      process.env.NODE_ENV === "production" ? z.string() : z.string().optional(),
-
-    SMTP_HOST:
-      process.env.NODE_ENV === "production" ? z.string() : z.string().optional(),
-    SMTP_PORT:
-      process.env.NODE_ENV === "production"
-        ? z.coerce.number().int().positive()
-        : z.coerce.number().int().positive().optional(),
-    SMTP_USER:
-      process.env.NODE_ENV === "production" ? z.string() : z.string().optional(),
-    SMTP_PASSWORD:
-      process.env.NODE_ENV === "production" ? z.string() : z.string().optional(),
+    // AUTH_SECRET is required at runtime but optional at build time
+    AUTH_SECRET: z.string().optional(),
+    // Discord auth is optional - only required if using Discord login
+    AUTH_DISCORD_ID: z.string().optional(),
+    AUTH_DISCORD_SECRET: z.string().optional(),
+    // Google auth is optional - only required if using Google login
+    GOOGLE_CLIENT_ID: z.string().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
+    // DATABASE_URL is required at runtime but can use placeholder at build
+    DATABASE_URL: z.string().url().optional(),
+    // Email/SMTP is optional - only required if using email features
+    EMAIL_FROM: z.string().optional(),
+    SMTP_HOST: z.string().optional(),
+    SMTP_PORT: z.coerce.number().int().positive().optional(),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASSWORD: z.string().optional(),
     SMTP_SECURE: z.coerce.boolean().default(false),
     NODE_ENV: z
       .enum(["development", "test", "production"])

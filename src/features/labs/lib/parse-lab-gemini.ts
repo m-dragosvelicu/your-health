@@ -121,12 +121,11 @@ Return ONLY the JSON object, no markdown formatting or extra text.`;
     const fencedMatch = /```(?:json)?\s*(\{[\s\S]*\})\s*```/.exec(text);
     const jsonMatch = fencedMatch ?? /(\{[\s\S]*\})/.exec(text);
 
-    const jsonText = jsonMatch?.[1];
-    if (!jsonText) {
+    if (!jsonMatch?.[1]) {
       throw new Error("Failed to extract JSON from Gemini response");
     }
 
-    jsonData = JSON.parse(jsonText);
+    jsonData = JSON.parse(jsonMatch[1]);
   }
 
   // Validate and return

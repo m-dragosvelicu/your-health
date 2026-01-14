@@ -177,14 +177,11 @@ function parseTestRow(line: string, section: string): ParsedLabTest | null {
   //   Anti-Thyroglobulin Antibody                 > 4000 IU/mL < 115
   const cleaned = line.replace(/\s+/g, " ").trim();
 
-  const valueMatch = /([<>]=?\s*)?(\d+(?:[.,]\d+)?)/.exec(cleaned);
-  if (valueMatch?.index === undefined) {
+  const valueMatch = cleaned.match(/([<>]=?\s*)?(\d+(?:[.,]\d+)?)/);
+  if (!valueMatch || valueMatch.index === undefined || !valueMatch[2]) {
     return null;
   }
   const valueText = valueMatch[2];
-  if (!valueText) {
-    return null;
-  }
 
   const prefix = cleaned.slice(0, valueMatch.index).trim();
   if (prefix.length < 3) {
@@ -267,12 +264,10 @@ function isLikelyUnit(token: string): boolean {
 function parseSynevoDate(value: string): Date | null {
   const trimmed = value.trim();
   const m = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/.exec(trimmed);
-  if (!m) return null;
-  const [, dd, mm, yyyy] = m;
-  if (!dd || !mm || !yyyy) return null;
-  const day = Number.parseInt(dd, 10);
-  const month = Number.parseInt(mm, 10);
-  const year = Number.parseInt(yyyy, 10);
+  if (!m?.[1] || !m[2] || !m[3]) return null;
+  const day = Number.parseInt(m[1], 10);
+  const month = Number.parseInt(m[2], 10);
+  const year = Number.parseInt(m[3], 10);
 
   if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) {
     return null;
@@ -286,15 +281,13 @@ function parseSynevoDateTime(value: string): Date | null {
   const trimmed = value.trim();
   const m =
     /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/.exec(trimmed);
-  if (!m) return parseSynevoDate(trimmed);
+  if (!m?.[1] || !m[2] || !m[3]) return parseSynevoDate(trimmed);
 
-  const [, dd, mm, yyyy, hh, min] = m;
-  if (!dd || !mm || !yyyy) return null;
-  const day = Number.parseInt(dd, 10);
-  const month = Number.parseInt(mm, 10);
-  const year = Number.parseInt(yyyy, 10);
-  const hours = hh ? Number.parseInt(hh, 10) : 0;
-  const minutes = min ? Number.parseInt(min, 10) : 0;
+  const day = Number.parseInt(m[1], 10);
+  const month = Number.parseInt(m[2], 10);
+  const year = Number.parseInt(m[3], 10);
+  const hours = m[4] ? Number.parseInt(m[4], 10) : 0;
+  const minutes = m[5] ? Number.parseInt(m[5], 10) : 0;
 
   if (
     !Number.isFinite(day) ||

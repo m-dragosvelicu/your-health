@@ -19,7 +19,8 @@ export async function GET(
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const parsed = ParamsSchema.safeParse(await params);
+  const resolvedParams = await params;
+  const parsed = ParamsSchema.safeParse(resolvedParams);
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, error: "Invalid lab id", issues: parsed.error.flatten() },
