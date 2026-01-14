@@ -5,6 +5,7 @@ import { Geist } from "next/font/google";
 
 import { TRPCReactProvider } from "~/trpc/trpc-provider";
 import { AuthSessionProvider } from "@/shared/components/session-provider";
+import { PWARegister } from "@/shared/components/pwa-register";
 import React from "react";
 
 // Viewport configuration for PWA
@@ -48,6 +49,8 @@ export default function RootLayout({
     // Using deep purple brand theme - light mode only
     <html lang="en" className={`${geist.variable}`}>
       <body className="brand-light">
+        {/* Register PWA service worker */}
+        <PWARegister />
         {/* Provide session context for authentication */}
         <AuthSessionProvider>
           {/* Provide tRPC client context to enable hooks in client components */}
