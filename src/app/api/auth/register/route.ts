@@ -2,9 +2,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { AuditAction } from "@prisma/client";
 import { db } from "@/shared/server/db";
 import { rateLimitOrThrow, recordAttempt } from "@/shared/server/security/rate-limit";
 import { getClientIp } from "@/shared/server/http/ip";
+import { logAudit } from "@/shared/server/audit";
 
 const RegisterSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -78,6 +80,14 @@ export async function POST(req: Request) {
     // Persist credentials (hash only)
     await db.credentials.create({
       data: { userId, email, passwordHash },
+    });
+
+    await logAudit({
+      action: AuditAction.USER_REGISTERED,
+      userId,
+      metadata: { email },
+      request: req,
+      ip,
     });
 
     await recordAttempt({ action: "register", email, ip }, true);

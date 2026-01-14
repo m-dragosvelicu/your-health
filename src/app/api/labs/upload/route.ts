@@ -6,7 +6,6 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/shared/server/auth";
 import { parseLabReportWithGemini } from "@/features/labs/lib/parse-lab-gemini";
-import { saveParsedLab } from "@/features/labs/lib/save-lab";
 
 export const runtime = "nodejs";
 
@@ -99,4 +98,3 @@ export async function POST(req: Request) {
     );
   }
 }
-

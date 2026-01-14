@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
-
 import { auth } from "@/shared/server/auth";
 import { db } from "@/shared/server/db";
 
@@ -44,16 +42,11 @@ export async function GET() {
   });
 }
 
-const LabIdSchema = z.object({
-  id: z.string().min(1),
-});
-
 export async function POST(req: Request) {
   // For now we don't support POST on /api/labs (upload is handled by /api/labs/upload).
-  const _ = req;
+  void req;
   return NextResponse.json(
     { ok: false, error: "Use /api/labs/upload for uploads." },
     { status: 405 },
   );
 }
-

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { AuditAction } from "@prisma/client";
 
 import { createPasswordResetToken, sendPasswordResetEmail } from "@/features/auth/lib/password-reset";
 import { db } from "@/shared/server/db";
 import { getClientIp } from "@/shared/server/http/ip";
 import { HttpError, rateLimitOrThrow, recordAttempt } from "@/shared/server/security/rate-limit";
+import { logAudit } from "@/shared/server/audit";
 
 const PasswordResetRequestSchema = z.object({
   email: z.string().email().transform((value) => value.trim().toLowerCase()),
@@ -95,6 +97,15 @@ export async function POST(req: Request) {
     }
 
     await recordAttempt({ action: "password-reset-request", email, ip }, true);
+
+    await logAudit({
+      action: AuditAction.PASSWORD_RESET_REQUEST,
+      userId: user?.id ?? null,
+      metadata: { email, delivered: shouldSend },
+      request: req,
+      ip,
+    });
+
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (err) {
     await recordAttempt({ action: "password-reset-request", email, ip }, false);

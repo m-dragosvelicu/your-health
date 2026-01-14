@@ -92,7 +92,7 @@ export async function recordAttempt(key: RateKey, success: boolean): Promise<voi
         ip,
       },
     });
-  } catch (_: unknown) {
+  } catch {
     // Swallow errors; logging can be added if desired.
   }
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { type ReactNode } from "react";
 import { SettingsDropdown } from "@/app/_components/settings-dropdown";
 
@@ -14,9 +15,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <span className="text-lg font-semibold">Health Tracker</span>
           </div>
           <nav className="flex items-center gap-4 text-sm text-muted-foreground">
-            <a href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</a>
-            <a href="/dashboard/labs" className="hover:text-foreground transition-colors">Labs</a>
-            <a href="/dashboard/medications" className="hover:text-foreground transition-colors">Medications</a>
+            <Link href="/dashboard" className="hover:text-foreground transition-colors">
+              Dashboard
+            </Link>
+            <Link href="/dashboard/labs" className="hover:text-foreground transition-colors">
+              Labs
+            </Link>
+            <Link href="/dashboard/medications" className="hover:text-foreground transition-colors">
+              Medications
+            </Link>
             <SettingsDropdown />
           </nav>
         </div>

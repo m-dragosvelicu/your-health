@@ -1,0 +1,1127 @@
+openapi: 3.1.0
+info:
+  title: Health Tracker API
+  version: 0.1.0
+  summary: API for Lab Reports, Biomarkers, Measurements, OCR, AI analysis, and Audit logs.
+  description: |
+    Cookie-authenticated (NextAuth) API. All data is **scoped to the authenticated user** unless otherwise noted.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: https://api.healthtracker.app
+    description: Production
+  - url: https://staging.healthtracker.app
+    description: Staging
+  - url: https://healthtracker.dev
+    description: Developer sandbox (tunnel or reverse proxy to local dev)
+
+tags:
+  - name: Biomarkers
+    description: Read-only access to biomarker definitions, units, and reference ranges.
+  - name: Measurements
+    description: CRUD for user measurements and parsed biomarker readings.
+  - name: Lab Reports
+    description: Upload, manage, and review lab report metadata plus associated data.
+  - name: OCR
+    description: Retrieve OCR results extracted from lab reports.
+  - name: Analyses
+    description: Manage AI-driven analyses derived from lab reports.
+  - name: Storage
+    description: Retrieve metadata for stored user files.
+  - name: Audit
+    description: Inspect user-facing audit logs and events.
+
+security:
+  - cookieAuth: []
+  - bearerAuth: []
+
+paths:
+  /biomarkers:
+    get:
+      tags: [Biomarkers]
+      summary: List biomarkers
+      operationId: listBiomarkers
+      parameters:
+        - in: query
+          name: category
+          schema: { $ref: '#/components/schemas/BiomarkerCategory' }
+        - in: query
+          name: search
+          schema: { type: string, maxLength: 100 }
+          description: Search by name or slug (case-insensitive substring).
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: Biomarker list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Biomarker' }
+                  nextCursor:
+                    type:
+                      - string
+                      - 'null'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /biomarkers/{idOrSlug}:
+    get:
+      tags: [Biomarkers]
+      summary: Get biomarker by id or slug
+      operationId: getBiomarker
+      parameters:
+        - name: idOrSlug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Biomarker
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Biomarker' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /measurements:
+    get:
+      tags: [Measurements]
+      summary: List measurements (current user)
+      operationId: listMeasurements
+      parameters:
+        - in: query
+          name: biomarkerId
+          schema: { type: string }
+        - in: query
+          name: category
+          schema: { $ref: '#/components/schemas/BiomarkerCategory' }
+        - in: query
+          name: flag
+          schema: { $ref: '#/components/schemas/MeasurementFlag' }
+        - in: query
+          name: measuredAtFrom
+          schema: { type: string, format: date-time }
+        - in: query
+          name: measuredAtTo
+          schema: { type: string, format: date-time }
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: Measurement list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Measurement' }
+                  nextCursor:
+                    type:
+                      - string
+                      - 'null'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Measurements]
+      summary: Create a manual measurement
+      operationId: createMeasurement
+      description: Creates a measurement for the authenticated user. Server infers `userId`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required: [biomarkerId, unit]
+              type: object
+              properties:
+                biomarkerId: { type: string }
+                labReportId:
+                  type:
+                    - string
+                    - 'null'
+                measuredAt:
+                  type:
+                    - string
+                    - 'null'
+                  format: date-time
+                value: { $ref: '#/components/schemas/Decimal' }
+                inCanonicalUnit:
+                  oneOf:
+                    - $ref: '#/components/schemas/Decimal'
+                    - type: 'null'
+                comparator: { $ref: '#/components/schemas/MeasurementComparator' }
+                rawValueText:
+                  type:
+                    - string
+                    - 'null'
+                  maxLength: 50
+                unit: { type: string, maxLength: 32 }
+                referenceLow:
+                  oneOf:
+                    - $ref: '#/components/schemas/Decimal'
+                    - type: 'null'
+                referenceHigh:
+                  oneOf:
+                    - $ref: '#/components/schemas/Decimal'
+                    - type: 'null'
+                referenceText:
+                  type:
+                    - string
+                    - 'null'
+                  maxLength: 200
+                flag: { $ref: '#/components/schemas/MeasurementFlag' }
+                note:
+                  type:
+                    - string
+                    - 'null'
+                  maxLength: 1000
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Measurement' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /measurements/{id}:
+    get:
+      tags: [Measurements]
+      summary: Get measurement
+      operationId: getMeasurement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Measurement
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Measurement' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Measurements]
+      summary: Update measurement (manual edits)
+      operationId: updateMeasurement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Partial update; immutable fields (userId, biomarkerId) not accepted.
+              properties:
+                measuredAt: { type: string, format: date-time }
+                value: { $ref: '#/components/schemas/Decimal' }
+                inCanonicalUnit:
+                  oneOf:
+                    - $ref: '#/components/schemas/Decimal'
+                    - type: 'null'
+                comparator: { $ref: '#/components/schemas/MeasurementComparator' }
+                rawValueText:
+                  type:
+                    - string
+                    - 'null'
+                  maxLength: 50
+                unit: { type: string, maxLength: 32 }
+                referenceLow:
+                  oneOf:
+                    - $ref: '#/components/schemas/Decimal'
+                    - type: 'null'
+                referenceHigh:
+                  oneOf:
+                    - $ref: '#/components/schemas/Decimal'
+                    - type: 'null'
+                referenceText:
+                  type:
+                    - string
+                    - 'null'
+                  maxLength: 200
+                flag: { $ref: '#/components/schemas/MeasurementFlag' }
+                note:
+                  type:
+                    - string
+                    - 'null'
+                  maxLength: 1000
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Measurement' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Measurements]
+      summary: Soft-delete measurement
+      operationId: deleteMeasurement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204': { description: Soft-deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /lab-reports:
+    get:
+      tags: [Lab Reports]
+      summary: List lab reports (current user)
+      operationId: listLabReports
+      parameters:
+        - in: query
+          name: status
+          schema: { $ref: '#/components/schemas/LabReportStatus' }
+        - in: query
+          name: dateFrom
+          schema: { type: string, format: date-time }
+        - in: query
+          name: dateTo
+          schema: { type: string, format: date-time }
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: LabReport list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/LabReport' }
+                  nextCursor:
+                    type:
+                      - string
+                      - 'null'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Lab Reports]
+      summary: Create lab report (metadata-only)
+      operationId: createLabReport
+      description: |
+        Creates a LabReport without a file (e.g., for manual-only reports).
+        To upload a file and create a pending LabReport, use **POST /api/uploads/lab-report**.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type:
+                    - string
+                    - 'null'
+                  maxLength: 160
+                providerName:
+                  type:
+                    - string
+                    - 'null'
+                  maxLength: 120
+                accessionNumber:
+                  type:
+                    - string
+                    - 'null'
+                  maxLength: 120
+                orderId:
+                  type:
+                    - string
+                    - 'null'
+                  maxLength: 120
+                collectedAt:
+                  type:
+                    - string
+                    - 'null'
+                  format: date-time
+                receivedAt:
+                  type:
+                    - string
+                    - 'null'
+                  format: date-time
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LabReport' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /lab-reports/{id}:
+    get:
+      tags: [Lab Reports]
+      summary: Get lab report (with OCR/measurements counts)
+      operationId: getLabReport
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: LabReport
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LabReport' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Lab Reports]
+      summary: Update lab report metadata
+      operationId: updateLabReport
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type:
+                    - string
+                    - 'null'
+                  maxLength: 160
+                providerName:
+                  type:
+                    - string
+                    - 'null'
+                  maxLength: 120
+                accessionNumber:
+                  type:
+                    - string
+                    - 'null'
+                  maxLength: 120
+                orderId:
+                  type:
+                    - string
+                    - 'null'
+                  maxLength: 120
+                collectedAt:
+                  type:
+                    - string
+                    - 'null'
+                  format: date-time
+                receivedAt:
+                  type:
+                    - string
+                    - 'null'
+                  format: date-time
+                status: { $ref: '#/components/schemas/LabReportStatus' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LabReport' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Lab Reports]
+      summary: Soft-delete lab report
+      operationId: deleteLabReport
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204': { description: Soft-deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /lab-reports/{id}/measurements:
+    get:
+      tags: [Lab Reports]
+      summary: List measurements for a lab report
+      operationId: listLabReportMeasurements
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: Measurement list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Measurement' }
+                  nextCursor:
+                    type:
+                      - string
+                      - 'null'
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Lab Reports]
+      summary: Add a measurement to a report
+      operationId: addLabReportMeasurement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/MeasurementCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Measurement' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/uploads/lab-report:
+    post:
+      tags: [Lab Reports, Storage]
+      summary: Upload a lab report file (PDF/JPG/PNG) and create a pending LabReport
+      operationId: uploadLabReportFile
+      description: Returns a LabReport with status=PENDING and linked StorageObject.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PDF/JPG/PNG
+                title:
+                  type:
+                    - string
+                    - 'null'
+                  maxLength: 160
+                providerName:
+                  type:
+                    - string
+                    - 'null'
+                  maxLength: 120
+                collectedAt:
+                  type:
+                    - string
+                    - 'null'
+                  format: date-time
+                receivedAt:
+                  type:
+                    - string
+                    - 'null'
+                  format: date-time
+      responses:
+        '201':
+          description: Created (pending LabReport)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  labReport: { $ref: '#/components/schemas/LabReport' }
+                  storageObject: { $ref: '#/components/schemas/StorageObject' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '415':
+          description: Unsupported media type
+
+  /lab-reports/{id}/ocr:
+    get:
+      tags: [OCR]
+      summary: Get OCR result attached to a report
+      operationId: getLabReportOcr
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OCR result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LabReportOcr' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /lab-reports/{id}/analyses:
+    get:
+      tags: [Analyses]
+      summary: List analyses for a lab report
+      operationId: listLabReportAnalyses
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Analyses
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ReportAnalysis' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Analyses]
+      summary: Run AI analysis for a lab report
+      operationId: runLabReportAnalysis
+      description: Queues/runs an analysis and returns the created record.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model:
+                  type:
+                    - string
+                    - 'null'
+                promptVersion:
+                  type:
+                    - string
+                    - 'null'
+      responses:
+        '202':
+          description: Analysis started
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportAnalysis' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /analyses/{id}:
+    get:
+      tags: [Analyses]
+      summary: Get an analysis
+      operationId: getAnalysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Report analysis
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportAnalysis' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /storage/{id}:
+    get:
+      tags: [Storage]
+      summary: Get storage object metadata
+      operationId: getStorageObject
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: StorageObject
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StorageObject' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /audit-logs:
+    get:
+      tags: [Audit]
+      summary: List audit logs (current user)
+      operationId: listAuditLogs
+      description: Returns audit entries for the authenticated user. Admin scope may list more (future).
+      parameters:
+        - in: query
+          name: action
+          schema: { $ref: '#/components/schemas/AuditAction' }
+        - in: query
+          name: dateFrom
+          schema: { type: string, format: date-time }
+        - in: query
+          name: dateTo
+          schema: { type: string, format: date-time }
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: Audit logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AuditLog' }
+                  nextCursor:
+                    type:
+                      - string
+                      - 'null'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+components:
+  parameters:
+    limit:
+      in: query
+      name: limit
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    cursor:
+      in: query
+      name: cursor
+      schema:
+        type:
+          - string
+          - 'null'
+
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: |
+        NextAuth session cookie. In production, cookie name may be "__Secure-next-auth.session-token".
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ## ---------- Base primitives ----------
+    Decimal:
+      type: string
+      description: |
+        Decimal stored as string (high precision). Example: "5.4001"
+      pattern: '^-?\d+(\.\d+)?$'
+      example: "11.2"
+
+    Error:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details:
+          oneOf:
+            - type: object
+            - type: array
+              items: { type: object }
+            - type: 'null'
+
+    ## ---------- Enums ----------
+    StorageProvider:
+      type: string
+      enum: [LOCAL, S3, GCS]
+    LabReportStatus:
+      type: string
+      enum: [PENDING, OCR_PROCESSING, OCR_FAILED, PARSED, READY]
+    BiomarkerCategory:
+      type: string
+      enum: [CBC, METABOLIC, LIPIDS, RENAL, LIVER, THYROID, HORMONE, VITAMINS, INFLAMMATION, OTHER]
+    MeasurementComparator:
+      type: string
+      enum: [LT, LTE, EQ, GTE, GT, APPROX]
+    MeasurementFlag:
+      type: string
+      enum: [LOW, HIGH, NORMAL, CRITICAL_LOW, CRITICAL_HIGH, ABNORMAL, UNKNOWN]
+    MeasurementSource:
+      type: string
+      enum: [OCR, MANUAL, EXTERNAL]
+    AnalysisStatus:
+      type: string
+      enum: [PENDING, RUNNING, FAILED, DONE]
+    AuditAction:
+      type: string
+      enum:
+        [ LOGIN, LOGOUT, USER_REGISTERED, PASSWORD_CHANGE, PASSWORD_RESET_REQUEST,
+          LAB_REPORT_CREATE, LAB_REPORT_UPLOAD, LAB_REPORT_VIEW, LAB_REPORT_UPDATE, LAB_REPORT_DELETE,
+          MEASUREMENT_CREATE, MEASUREMENT_VIEW, MEASUREMENT_UPDATE, MEASUREMENT_DELETE,
+          AI_ANALYSIS_RUN, SHARE_LINK_CREATE, SHARE_LINK_REVOKE ]
+
+    ## ---------- Models ----------
+    StorageObject:
+      type: object
+      properties:
+        id: { type: string, readOnly: true }
+        userId: { type: string, readOnly: true }
+        provider: { $ref: '#/components/schemas/StorageProvider' }
+        bucket:
+          type:
+            - string
+            - 'null'
+        key: { type: string }
+        url:
+          type:
+            - string
+            - 'null'
+        mimeType:
+          type:
+            - string
+            - 'null'
+        size:
+          type:
+            - integer
+            - 'null'
+        sha256:
+          type:
+            - string
+            - 'null'
+        width:
+          type:
+            - integer
+            - 'null'
+        height:
+          type:
+            - integer
+            - 'null'
+        pageCount:
+          type:
+            - integer
+            - 'null'
+        createdAt: { type: string, format: date-time, readOnly: true }
+        updatedAt: { type: string, format: date-time, readOnly: true }
+
+    LabReport:
+      type: object
+      properties:
+        id: { type: string, readOnly: true }
+        userId: { type: string, readOnly: true }
+        title:
+          type:
+            - string
+            - 'null'
+        providerName:
+          type:
+            - string
+            - 'null'
+        accessionNumber:
+          type:
+            - string
+            - 'null'
+        orderId:
+          type:
+            - string
+            - 'null'
+        collectedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        receivedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        status: { $ref: '#/components/schemas/LabReportStatus' }
+        sourceFileId:
+          type:
+            - string
+            - 'null'
+        createdAt: { type: string, format: date-time, readOnly: true }
+        updatedAt: { type: string, format: date-time, readOnly: true }
+        deletedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          readOnly: true
+    LabReportOcr:
+      type: object
+      properties:
+        id: { type: string, readOnly: true }
+        labReportId: { type: string }
+        engine:
+          type:
+            - string
+            - 'null'
+        confidenceAvg:
+          type:
+            - number
+            - 'null'
+          format: float
+        pageCount:
+          type:
+            - integer
+            - 'null'
+        rawText: { type: string }
+        blocksJson:
+          oneOf:
+            - type: object
+            - type: array
+              items: { type: object }
+            - type: 'null'
+        createdAt: { type: string, format: date-time, readOnly: true }
+        updatedAt: { type: string, format: date-time, readOnly: true }
+
+    Biomarker:
+      type: object
+      properties:
+        id: { type: string, readOnly: true }
+        slug: { type: string }
+        name: { type: string }
+        category: { $ref: '#/components/schemas/BiomarkerCategory' }
+        canonicalUnit: { type: string }
+        defaultRefLow:
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        defaultRefHigh:
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        maleRefLow:
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        maleRefHigh:
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        femaleRefLow:
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        femaleRefHigh:
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        description:
+          type:
+            - string
+            - 'null'
+        sortOrder:
+          type:
+            - integer
+            - 'null'
+        createdAt: { type: string, format: date-time, readOnly: true }
+        updatedAt: { type: string, format: date-time, readOnly: true }
+
+    Measurement:
+      type: object
+      properties:
+        id: { type: string, readOnly: true }
+        userId: { type: string, readOnly: true }
+        biomarkerId: { type: string }
+        labReportId:
+          type:
+            - string
+            - 'null'
+        measuredAt: { type: string, format: date-time }
+        value:
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        inCanonicalUnit:
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        comparator: { $ref: '#/components/schemas/MeasurementComparator' }
+        rawValueText:
+          type:
+            - string
+            - 'null'
+        unit: { type: string }
+        referenceLow:
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        referenceHigh:
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        referenceText:
+          type:
+            - string
+            - 'null'
+        flag: { $ref: '#/components/schemas/MeasurementFlag' }
+        source: { $ref: '#/components/schemas/MeasurementSource' }
+        ocrConfidence:
+          type:
+            - number
+            - 'null'
+          format: float
+        provenanceFileId:
+          type:
+            - string
+            - 'null'
+        note:
+          type:
+            - string
+            - 'null'
+        createdAt: { type: string, format: date-time, readOnly: true }
+        updatedAt: { type: string, format: date-time, readOnly: true }
+        deletedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          readOnly: true
+
+    MeasurementCreate:
+      type: object
+      required: [biomarkerId, unit]
+      properties:
+        biomarkerId: { type: string }
+        measuredAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        value:
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        inCanonicalUnit:
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        comparator: { $ref: '#/components/schemas/MeasurementComparator' }
+        rawValueText:
+          type:
+            - string
+            - 'null'
+        unit: { type: string }
+        referenceLow:
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        referenceHigh:
+          oneOf:
+            - $ref: '#/components/schemas/Decimal'
+            - type: 'null'
+        referenceText:
+          type:
+            - string
+            - 'null'
+        flag: { $ref: '#/components/schemas/MeasurementFlag' }
+        note:
+          type:
+            - string
+            - 'null'
+
+    ReportAnalysis:
+      type: object
+      properties:
+        id: { type: string, readOnly: true }
+        labReportId: { type: string }
+        userId: { type: string, readOnly: true }
+        status: { $ref: '#/components/schemas/AnalysisStatus' }
+        model:
+          type:
+            - string
+            - 'null'
+        promptVersion:
+          type:
+            - string
+            - 'null'
+        summaryMarkdown:
+          type:
+            - string
+            - 'null'
+        findings:
+          oneOf:
+            - type: object
+            - type: array
+              items: { type: object }
+            - type: 'null'
+        riskTags:
+          type: array
+          items: { type: string }
+        tokensPrompt:
+          type:
+            - integer
+            - 'null'
+        tokensCompletion:
+          type:
+            - integer
+            - 'null'
+        errorMessage:
+          type:
+            - string
+            - 'null'
+        createdAt: { type: string, format: date-time, readOnly: true }
+        updatedAt: { type: string, format: date-time, readOnly: true }
+
+    AuditLog:
+      type: object
+      properties:
+        id: { type: string, readOnly: true }
+        userId:
+          type:
+            - string
+            - 'null'
+        action: { $ref: '#/components/schemas/AuditAction' }
+        ip:
+          type:
+            - string
+            - 'null'
+        userAgent:
+          type:
+            - string
+            - 'null'
+        subjectType:
+          type:
+            - string
+            - 'null'
+        subjectId:
+          type:
+            - string
+            - 'null'
+        metadata:
+          oneOf:
+            - type: object
+            - type: array
+              items: { type: object }
+            - type: 'null'
+        createdAt: { type: string, format: date-time, readOnly: true }

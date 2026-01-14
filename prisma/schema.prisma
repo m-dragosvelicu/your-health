@@ -117,6 +117,77 @@ model MedicationLog {
   @@index([medicationId, scheduledAt])
 }
 
+enum BiomarkerCategory {
+  CBC
+  METABOLIC
+  LIPIDS
+  RENAL
+  LIVER
+  THYROID
+  HORMONE
+  VITAMINS
+  INFLAMMATION
+  OTHER
+}
+
+enum AuditAction {
+  LOGIN
+  LOGOUT
+  USER_REGISTERED
+  PASSWORD_CHANGE
+  PASSWORD_RESET_REQUEST
+  LAB_REPORT_CREATE
+  LAB_REPORT_UPLOAD
+  LAB_REPORT_UPDATE
+  LAB_REPORT_DELETE
+  LAB_REPORT_VIEW
+  MEASUREMENT_CREATE
+  MEASUREMENT_VIEW
+  MEASUREMENT_UPDATE
+  MEASUREMENT_DELETE
+  AI_ANALYSIS_RUN
+  SHARE_LINK_CREATE
+  SHARE_LINK_REVOKE
+}
+
+model Biomarker {
+  id            String            @id @default(cuid())
+  slug          String            @unique
+  name          String
+  category      BiomarkerCategory @default(OTHER)
+  canonicalUnit String
+
+  defaultRefLow  Decimal? @db.Decimal(20, 10)
+  defaultRefHigh Decimal? @db.Decimal(20, 10)
+
+  description String?
+  sortOrder   Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category, name])
+}
+
+model AuditLog {
+  id     String  @id @default(cuid())
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  action    AuditAction
+  ip        String?
+  userAgent String?
+
+  subjectType String?
+  subjectId   String?
+
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+}
+
 // Necessary for Next auth
 model Account {
   id                       String  @id @default(cuid())
@@ -156,6 +227,7 @@ model User {
   posts         Post[]
   labs          Lab[]
   medications   Medication[]
+  auditLogs     AuditLog[]
 
   credentials Credentials?
 }

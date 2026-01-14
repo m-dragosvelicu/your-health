@@ -21,10 +21,8 @@ export default async function LabDetailPage({ params }: LabsDetailPageProps) {
     Record<string, (typeof lab.tests)[number][]>
   >((acc, test) => {
     const key = test.section ?? "Other";
-    if (!acc[key]) {
-      acc[key] = [];
-    }
-    acc[key]!.push(test);
+    const bucket = (acc[key] ??= []);
+    bucket.push(test);
     return acc;
   }, {});
 

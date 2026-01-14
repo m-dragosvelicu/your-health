@@ -72,8 +72,13 @@ GEMINI_API_KEY="your-gemini-api-key"
 # Install dependencies
 npm install
 
-# Set up the database
+# Apply the database schema (choose one)
+npm run db:generate
+# or
 npm run db:push
+
+# Seed reference data (biomarkers, etc.)
+npm run db:seed
 
 # Start development server
 npm run dev
@@ -106,7 +111,10 @@ src/
 | `npm run dev` | Start development server |
 | `npm run build` | Build for production |
 | `npm run start` | Start production server |
+| `npm run db:generate` | Create/apply a new migration (dev) |
+| `npm run db:migrate` | Apply migrations in deploy environments |
 | `npm run db:push` | Push Prisma schema to database |
+| `npm run db:seed` | Populate canonical biomarkers |
 | `npm run db:studio` | Open Prisma Studio |
 
 ## Authentication
