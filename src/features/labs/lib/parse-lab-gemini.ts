@@ -106,20 +106,20 @@ Return ONLY the JSON object, no markdown formatting or extra text.`;
 
   // Generate content
   const result = await model.generateContent([prompt, pdfPart]);
-  const response = await result.response;
+  const response = result.response;
   const text = response.text();
 
   console.log("📄 Raw Gemini response:", text.substring(0, 200) + "...");
 
   // Parse and validate with Zod
-  let jsonData;
+  let jsonData: unknown;
   try {
     // Try parsing as direct JSON first
     jsonData = JSON.parse(text);
-  } catch (e) {
+  } catch {
     // If that fails, try extracting from markdown code block
-    const jsonMatch = text.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/) ||
-                      text.match(/(\{[\s\S]*\})/);
+    const fencedMatch = /```(?:json)?\s*(\{[\s\S]*\})\s*```/.exec(text);
+    const jsonMatch = fencedMatch ?? /(\{[\s\S]*\})/.exec(text);
 
     if (!jsonMatch?.[1]) {
       throw new Error("Failed to extract JSON from Gemini response");

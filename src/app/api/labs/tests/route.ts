@@ -35,21 +35,22 @@ export async function GET() {
     });
 
     // Group by section for better UX
-    const grouped = tests.reduce((acc, test) => {
-      const section = test.section || "Other";
-      if (!acc[section]) {
-        acc[section] = [];
-      }
-      acc[section].push({
-        name: test.name,
-        unit: test.unit,
-      });
-      return acc;
-    }, {} as Record<string, Array<{ name: string; unit: string | null }>>);
+    const grouped = tests.reduce(
+      (acc, test) => {
+        const section = test.section ?? "Other";
+        const bucket = (acc[section] ??= []);
+        bucket.push({
+          name: test.name,
+          unit: test.unit,
+        });
+        return acc;
+      },
+      {} as Record<string, Array<{ name: string; unit: string | null }>>,
+    );
 
     return NextResponse.json({
       ok: true,
-      tests: tests.map(t => ({ name: t.name, unit: t.unit, section: t.section })),
+      tests: tests.map((t) => ({ name: t.name, unit: t.unit, section: t.section })),
       grouped,
     });
   } catch (err) {

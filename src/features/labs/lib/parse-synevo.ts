@@ -52,6 +52,10 @@ export async function parseSynevoPdf(buffer: Buffer): Promise<ParsedLab> {
   return parseSynevoText(result.text);
 }
 
+export function parseSynevo(text: string): ParsedLab {
+  return parseSynevoText(text);
+}
+
 export function parseSynevoText(text: string): ParsedLab {
   const lines = text
     .split(/\r?\n/)
@@ -177,6 +181,7 @@ function parseTestRow(line: string, section: string): ParsedLabTest | null {
   if (!valueMatch || valueMatch.index === undefined || !valueMatch[2]) {
     return null;
   }
+  const valueText = valueMatch[2];
 
   const prefix = cleaned.slice(0, valueMatch.index).trim();
   if (prefix.length < 3) {
@@ -186,17 +191,17 @@ function parseTestRow(line: string, section: string): ParsedLabTest | null {
   // Drop technical prefixes like "LC" if present.
   const name = prefix.replace(/^LC\s+/i, "").trim();
 
-  const rawValue = `${valueMatch[1] ?? ""}${valueMatch[2]}`.trim();
+  const rawValue = `${valueMatch[1] ?? ""}${valueText}`.trim();
   let numericValue: number | null = null;
 
   if (!rawValue.startsWith("<") && !rawValue.startsWith(">")) {
-    const asNumber = Number.parseFloat(valueMatch[2].replace(",", "."));
+    const asNumber = Number.parseFloat(valueText.replace(",", "."));
     if (!Number.isNaN(asNumber)) {
       numericValue = asNumber;
     }
   }
 
-  let rest = cleaned.slice(valueMatch.index + rawValue.length).trim();
+  const rest = cleaned.slice(valueMatch.index + rawValue.length).trim();
   if (!rest) {
     return {
       section,
@@ -231,7 +236,8 @@ function parseTestRow(line: string, section: string): ParsedLabTest | null {
   }
 
   const unit = unitTokens.length > 0 ? unitTokens.join(" ") : null;
-  const refRaw = parts.slice(idx).join(" ").trim() || null;
+  const refRawText = parts.slice(idx).join(" ").trim();
+  const refRaw = refRawText.length > 0 ? refRawText : null;
 
   // Very short names or missing units are likely false positives.
   if (!unit) {
@@ -295,4 +301,3 @@ function parseSynevoDateTime(value: string): Date | null {
 
   return new Date(year, month - 1, day, hours, minutes);
 }
-

@@ -195,8 +195,8 @@ export default function Home() {
               </span>
             </h2>
             <p className="text-2xl leading-relaxed text-slate-600">
-              Your health data is scattered. You're wasting time, missing doses,
-              and walking into appointments unprepared. There's a better way.
+              Your health data is scattered. You&apos;re wasting time, missing doses,
+              and walking into appointments unprepared. Thereu&apos;s a better way.
             </p>
           </motion.div>
         </div>
@@ -317,7 +317,7 @@ export default function Home() {
                 Ready to take control?
               </h2>
               <p className="mx-auto mb-12 max-w-2xl text-2xl leading-relaxed text-slate-600">
-                Join thousands of people who've simplified their health data
+                Join thousands of people whou&apos;ve simplified their health data
                 management. No credit card required.
               </p>
               <Button

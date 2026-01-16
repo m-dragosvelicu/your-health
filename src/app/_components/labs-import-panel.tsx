@@ -214,13 +214,15 @@ export default function LabsImportPanel() {
   // Group edited tests by section, preserving original index for editing
   const groupedBySection: Record<string, { test: EditedTest; index: number }[]> | null =
     editedTests.length > 0
-      ? editedTests.reduce<Record<string, { test: EditedTest; index: number }[]>>((acc, test, index) => {
-          if (!acc[test.section]) {
-            acc[test.section] = [];
-          }
-          acc[test.section]!.push({ test, index });
-          return acc;
-        }, {})
+      ? editedTests.reduce<Record<string, { test: EditedTest; index: number }[]>>(
+          (acc, test, index) => {
+            const section = test.section ?? "Other";
+            const bucket = (acc[section] ??= []);
+            bucket.push({ test, index });
+            return acc;
+          },
+          {},
+        )
       : null;
 
   return (

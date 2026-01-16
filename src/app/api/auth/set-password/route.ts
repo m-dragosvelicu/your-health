@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { AuditAction } from "@prisma/client";
 import { db } from "@/shared/server/db";
 import { auth } from "@/shared/server/auth"; // from src/shared/server/auth/index.ts
+import { logAudit } from "@/shared/server/audit";
+import { getClientIp } from "@/shared/server/http/ip";
 
 const SetPasswordSchema = z.object({
   currentPassword: z.string().min(0).max(100).optional(), // required if already have credentials
@@ -81,6 +84,14 @@ export async function POST(req: Request) {
     // 6) Invalidate all existing sessions for this user (force re-login on other devices)
     await db.session.deleteMany({
       where: { userId },
+    });
+
+    await logAudit({
+      action: AuditAction.PASSWORD_CHANGE,
+      userId,
+      metadata: { email },
+      request: req,
+      ip: getClientIp(req),
     });
 
     return NextResponse.json({ ok: true }, { status: 200 });
