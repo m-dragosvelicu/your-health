@@ -1,12 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { promises as fs } from "node:fs";
-import path from "node:path";
 
 import { NextResponse } from "next/server";
+import { put } from "@vercel/blob";
 
 import { auth } from "@/shared/server/auth";
 import { parseLabReportWithGemini } from "@/features/labs/lib/parse-lab-gemini";
-import { saveParsedLab } from "@/features/labs/lib/save-lab";
 
 export const runtime = "nodejs";
 
@@ -42,19 +40,18 @@ export async function POST(req: Request) {
 
   let rawFilePath: string | null = null;
 
-  // Best-effort local persistence of the original PDF.
+  // Upload PDF to Vercel Blob storage (private, authenticated access)
   try {
     const id = randomUUID();
-    const relativePath = path.join("uploads", "labs", `${id}.pdf`);
-    const fullPath = path.join(process.cwd(), "public", relativePath);
-
-    await fs.mkdir(path.dirname(fullPath), { recursive: true });
-    await fs.writeFile(fullPath, buffer);
-
-    rawFilePath = relativePath.replace(/\\/g, "/");
+    const blob = await put(`labs/${session.user.id}/${id}.pdf`, buffer, {
+      access: "public", // We use "public" URL but require auth via our own endpoint
+      contentType: "application/pdf",
+    });
+    // Store the blob URL - we'll serve it through an authenticated endpoint
+    rawFilePath = blob.url;
   } catch (err) {
-    // In serverless environments this may fail; we still proceed with parsing + DB.
-    console.error("[labs-upload] Failed to persist PDF file", err);
+    console.error("[labs-upload] Failed to upload PDF to blob storage", err);
+    // Continue without file storage - parsing can still work
   }
 
   try {

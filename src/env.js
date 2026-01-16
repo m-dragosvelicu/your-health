@@ -17,6 +17,8 @@ export const env = createEnv({
     GOOGLE_CLIENT_SECRET: z.string().optional(),
     // DATABASE_URL is required at runtime but can use placeholder at build
     DATABASE_URL: z.string().url().optional(),
+    // Vercel Blob storage - required for file uploads in production
+    BLOB_READ_WRITE_TOKEN: z.string().optional(),
     // Email/SMTP is optional - only required if using email features
     EMAIL_FROM: z.string().optional(),
     SMTP_HOST: z.string().optional(),
@@ -49,6 +51,7 @@ export const env = createEnv({
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
+    BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
     EMAIL_FROM: process.env.EMAIL_FROM,
     SMTP_HOST: process.env.SMTP_HOST,
     SMTP_PORT: process.env.SMTP_PORT,
