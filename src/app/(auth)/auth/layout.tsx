@@ -3,7 +3,7 @@ import React from "react";
 
 // Route-level metadata for the /auth section
 export const metadata: Metadata = {
-  title: "T3 - Authentication Page",
+  title: "Sign In",
   description: "Sign in to your account or create a new one to access your personalized health tracking dashboard.",
 };
 

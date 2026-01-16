@@ -10,12 +10,22 @@ import React from "react";
 // App-wide metadata for the Next.js App Router. This is used to populate <head>
 // and can be extended per-route via nested layouts/pages.
 export const metadata: Metadata = {
-  title: "Health Tracker",
-  description: "Track your health data, medications, and lab results",
+  title: {
+    default: "YourHealth",
+    template: "%s - YourHealth",
+  },
+  description: "Track your health data, medications, and lab results with AI-powered insights",
+  keywords: ["health tracking", "lab results", "medications", "biomarkers", "health data"],
+  authors: [{ name: "YourHealth Team" }],
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
     apple: "/favicon.svg",
+  },
+  openGraph: {
+    title: "YourHealth",
+    description: "Track your health data, medications, and lab results with AI-powered insights",
+    type: "website",
   },
 };
 
