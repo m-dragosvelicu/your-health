@@ -39,12 +39,12 @@ function AuthPageContent() {
     applyBrandTheme("deep");
   }, []);
 
-  // Redirect authenticated users to dashboard
+  // Redirect authenticated users to dashboard (but not if there's an error being shown)
   useEffect(() => {
-    if (status === "authenticated" && session) {
+    if (status === "authenticated" && session && !error) {
       router.push(callbackUrl);
     }
-  }, [status, session, router, callbackUrl]);
+  }, [status, session, router, callbackUrl, error]);
 
   const syncAuthQuery = useCallback(
     (nextMode: AuthMode, emailParam?: string | null) => {
@@ -68,7 +68,7 @@ function AuthPageContent() {
   );
 
   const changeMode = useCallback(
-    (nextMode: AuthMode, options?: { email?: string | null; focusEmail?: boolean }) => {
+    (nextMode: AuthMode, options?: { email?: string | null; focusEmail?: boolean; preserveError?: boolean }) => {
       setMode(nextMode);
       syncAuthQuery(nextMode, options?.email ?? undefined);
       if (options?.email !== undefined) {
@@ -80,7 +80,9 @@ function AuthPageContent() {
         });
       }
       setNotice(null);
-      setError(null);
+      if (!options?.preserveError) {
+        setError(null);
+      }
     },
     [syncAuthQuery],
   );
@@ -170,8 +172,8 @@ function AuthPageContent() {
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
         if (res.status === 409) {
-          changeMode("login", { email: trimmedEmail, focusEmail: true });
           setError(data?.error ?? "An account with this email already exists. Please log in.");
+          changeMode("login", { email: trimmedEmail, focusEmail: true, preserveError: true });
           return;
         }
 
