@@ -1,4 +1,4 @@
-import { analyticsRouter } from "@/features/analytics";
+import { analyticsRouter } from "@/features/analytics/api/router";
 import { authRouter } from "@/features/auth";
 import { labRouter } from "@/features/labs";
 import { medicationRouter } from "@/features/medications";
