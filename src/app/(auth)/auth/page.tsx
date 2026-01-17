@@ -158,6 +158,19 @@ function AuthPageContent() {
     }
 
     if (mode === "signup") {
+      // Client-side validation
+      if (!trimmedEmail) {
+        setError("Please enter your email address.");
+        return;
+      }
+      if (password.length < 8) {
+        setError("Password must be at least 8 characters.");
+        return;
+      }
+      if (password.length > 100) {
+        setError("Password is too long (max 100 characters).");
+        return;
+      }
       if (password !== confirm) {
         setError("Passwords do not match.");
         return;
@@ -170,14 +183,30 @@ function AuthPageContent() {
       });
 
       if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        const data = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          issues?: { fieldErrors?: Record<string, string[]> };
+        };
         if (res.status === 409) {
           setError(data?.error ?? "An account with this email already exists. Please log in.");
           changeMode("login", { email: trimmedEmail, focusEmail: true, preserveError: true });
           return;
         }
 
-        setError(data?.error ?? "Registration failed.");
+        // Parse validation errors for better feedback
+        const fieldErrors = data?.issues?.fieldErrors;
+        if (fieldErrors) {
+          if (fieldErrors.email?.length) {
+            setError("Please enter a valid email address.");
+            return;
+          }
+          if (fieldErrors.password?.length) {
+            setError(fieldErrors.password[0] ?? "Invalid password.");
+            return;
+          }
+        }
+
+        setError(data?.error ?? "Registration failed. Please check your details.");
         return;
       }
 
@@ -360,10 +389,14 @@ function AuthPageContent() {
                     name="password"
                     type="password"
                     required
+                    minLength={8}
                     placeholder={isSignup ? "Create a strong password" : isReset ? "Enter new password" : "Your password"}
                     autoComplete={isSignup || isReset ? "new-password" : "current-password"}
                     className="h-11 w-full rounded-lg border border-slate-200 bg-white/50 px-4 text-sm backdrop-blur transition-all focus:border-[var(--brand-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20"
                   />
+                  {isSignup && (
+                    <p className="text-xs text-muted-foreground">At least 8 characters</p>
+                  )}
                 </div>
               )}
               {/* The "confirm password" field is for signup and reset */}
