@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { Button } from "@/shared/components/ui/button";
 
@@ -59,12 +60,20 @@ export function SettingsDropdown() {
       </Button>
       {open && (
         <div className="absolute right-0 mt-2 w-40 rounded-md border bg-popover text-sm shadow-md">
+          <Link
+            href="/dashboard/profile"
+            className="flex w-full items-center px-3 py-2 text-left text-foreground hover:bg-accent hover:text-accent-foreground"
+            onClick={() => setOpen(false)}
+          >
+            Profile
+          </Link>
+          <div className="border-t" />
           <button
             type="button"
-            className="flex w-full items-center justify-between px-3 py-2 text-left text-foreground hover:bg-accent hover:text-accent-foreground"
+            className="flex w-full items-center px-3 py-2 text-left text-foreground hover:bg-accent hover:text-accent-foreground"
             onClick={handleLogout}
           >
-            <span>Logout</span>
+            Logout
           </button>
         </div>
       )}
