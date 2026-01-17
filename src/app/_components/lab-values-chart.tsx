@@ -877,16 +877,17 @@ export default function LabValuesChart() {
                       payload: { points?: Record<string, DataPoint | undefined> };
                     };
                     const point = payload.points?.[series.key];
+                    const pointValue = point?.value;
                     const isHigh =
                       refHigh !== null &&
-                      point?.value !== null &&
-                      point?.value !== undefined &&
-                      point.value > refHigh;
+                      pointValue !== null &&
+                      pointValue !== undefined &&
+                      pointValue > refHigh;
                     const isLow =
                       refLow !== null &&
-                      point?.value !== null &&
-                      point?.value !== undefined &&
-                      point.value < refLow;
+                      pointValue !== null &&
+                      pointValue !== undefined &&
+                      pointValue < refLow;
 
                     return (
                       <circle
