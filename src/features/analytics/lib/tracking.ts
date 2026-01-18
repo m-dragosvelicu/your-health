@@ -140,7 +140,15 @@ async function updateDailyStats(event: TrackEventInput): Promise<void> {
         pageViews: event.category === "page_view"
           ? { increment: 1 }
           : undefined,
-        // Note: uniqueSessions and uniqueUsers are recalculated in aggregation job
+        labsUploaded: isLabUpload(event)
+          ? { increment: 1 }
+          : undefined,
+        medicationsCreated: isMedicationCreate(event)
+          ? { increment: 1 }
+          : undefined,
+        medicationsLogged: isMedicationLog(event)
+          ? { increment: 1 }
+          : undefined,
       },
     });
   } catch (error) {
